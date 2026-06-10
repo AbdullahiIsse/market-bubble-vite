@@ -1,9 +1,9 @@
-// Real platform sources: Twitch IRC + Kick Pusher chat readers and the viewer
-// pollers, all wired into the hub. X is handled separately (P4) and stays
-// `unavailable` here until enabled. Missing keys degrade gracefully.
+// Real platform sources behind a SourceManager so each platform can be
+// reconnected independently when the owner edits its target in Settings.
 import type { Hub } from './hub';
-import type { AppConfig } from './config';
 import type { Host } from '../shared/protocol';
+import type { RuntimeConfig } from './runtime-config';
+import { createSourceManager, type SourceManager, type SourceStarter } from './source-manager';
 import { createTwitchIrcAdapter } from './adapters/twitch-irc';
 import { createKickPusherAdapter } from './adapters/kick-pusher';
 import { startTwitchViewerPoller } from './pollers/twitch-viewers';
@@ -13,41 +13,48 @@ import { scoped } from './lib/log';
 
 const log = scoped('sources');
 
-export function startRealSources(hub: Hub, config: AppConfig): () => Promise<void> {
-  const stops: Array<() => void | Promise<void>> = [];
-
-  // ── Twitch chat: anonymous IRC, no credentials required ──
-  const twitchChannels: Record<string, Host> = {
+const twitchStarter: SourceStarter = (hub, config) => {
+  const channels: Record<string, Host> = {
     [config.twitchChannels.banks.toLowerCase()]: 'banks',
     [config.twitchChannels.ansem.toLowerCase()]: 'ansem',
   };
-  const twitch = createTwitchIrcAdapter(twitchChannels, {
+  const adapter = createTwitchIrcAdapter(channels, {
     onMessage: (m) => hub.ingestMessage(m),
     onStatus: (s) => hub.setStatus('twitch', s),
     onRemove: (sel) => hub.removeMessages('twitch', sel),
   });
-  twitch.start();
-  stops.push(() => twitch.stop());
+  adapter.start();
+  const stopPoller = startTwitchViewerPoller(hub, config);
+  return () => {
+    adapter.stop();
+    stopPoller();
+  };
+};
 
-  // ── Kick chat: unofficial Pusher feed ──
-  const kick = createKickPusherAdapter(config, {
+const kickStarter: SourceStarter = (hub, config) => {
+  const adapter = createKickPusherAdapter(config, {
     onMessage: (m) => hub.ingestMessage(m),
     onStatus: (s) => hub.setStatus('kick', s),
     onRemove: (sel) => hub.removeMessages('kick', sel),
   });
-  kick.start();
-  stops.push(() => kick.stop());
-
-  // ── X chat: experimental, owner-only, default off (fails soft to unavailable) ──
-  const x = startXSource(hub, config);
-  stops.push(x);
-
-  // ── Viewer pollers (own only the viewer matrix, not source status) ──
-  stops.push(startTwitchViewerPoller(hub, config));
-  stops.push(startKickViewerPoller(hub, config));
-
-  log('real sources started');
-  return async () => {
-    for (const s of stops) await s();
+  adapter.start();
+  const stopPoller = startKickViewerPoller(hub, config);
+  return () => {
+    adapter.stop();
+    stopPoller();
   };
+};
+
+// startXSource already owns BOTH X chat and X viewer polling.
+const xStarter: SourceStarter = (hub, config) => startXSource(hub, config);
+
+export function startRealSources(hub: Hub, runtime: RuntimeConfig): SourceManager {
+  const manager = createSourceManager(hub, runtime, {
+    twitch: twitchStarter,
+    kick: kickStarter,
+    x: xStarter,
+  });
+  manager.startAll();
+  log('real sources started');
+  return manager;
 }
