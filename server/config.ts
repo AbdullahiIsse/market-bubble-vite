@@ -1,6 +1,7 @@
 // Parses process.env into a typed AppConfig. Missing platform keys are not an
 // error — the corresponding source simply boots as `unavailable`.
 import { z } from 'zod';
+import { randomSecret } from './lib/admin-auth';
 
 const bool = (def: boolean) =>
   z
@@ -48,6 +49,9 @@ const EnvSchema = z.object({
   X_BROADCAST_ID_BANKS: str(''),
   X_BROADCAST_ID_ANSEM: str(''),
 
+  ADMIN_PASSWORD: str(''),
+  SESSION_SECRET: str(''),
+
   SIM_MODE: bool(false),
   SIM_RATE: int(90),
   SIM_BROADCAST: z
@@ -88,6 +92,12 @@ export interface AppConfig {
     flap: boolean;
   };
 
+  admin: {
+    password: string;
+    sessionSecret: string;
+    configured: boolean;
+  };
+
   viewerPollMs: number;
 }
 
@@ -125,6 +135,11 @@ export function loadConfig(): AppConfig {
       rate: e.SIM_RATE,
       broadcast: e.SIM_BROADCAST,
       flap: e.SIM_FLAP,
+    },
+    admin: {
+      password: e.ADMIN_PASSWORD,
+      sessionSecret: e.SESSION_SECRET || (e.ADMIN_PASSWORD ? randomSecret() : ''),
+      configured: !!e.ADMIN_PASSWORD,
     },
     viewerPollMs: e.VIEWER_POLL_MS,
   };
