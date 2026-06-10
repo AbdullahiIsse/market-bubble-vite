@@ -11,11 +11,19 @@ function Logo() {
   );
 }
 
-function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+function ModeTabs({
+  mode,
+  onChange,
+  showSettings,
+}: {
+  mode: Mode;
+  onChange: (m: Mode) => void;
+  showSettings: boolean;
+}) {
   const tabs: [Mode, string][] = [
     ['watch', 'Watch'],
     ['dashboard', 'Dashboard'],
-    ['settings', 'Settings'],
+    ...(showSettings ? ([['settings', 'Settings']] as [Mode, string][]) : []),
   ];
   return (
     <nav className="mode-tabs" aria-label="View mode">
@@ -33,18 +41,20 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
 }
 
 // memo: chat flushes re-render the app shell ~10x/s; the top bar only depends
-// on the mode.
+// on the mode + whether the admin Settings tab should show.
 export const TopBar = memo(function TopBar({
   mode,
   onChange,
+  showSettings,
 }: {
   mode: Mode;
   onChange: (m: Mode) => void;
+  showSettings: boolean;
 }) {
   return (
     <header className="topbar">
       <Logo />
-      <ModeTabs mode={mode} onChange={onChange} />
+      <ModeTabs mode={mode} onChange={onChange} showSettings={showSettings} />
       <div className="topbar-schedule">
         Live<span className="dot-sep">&bull;</span>Thursdays<span className="dot-sep">&bull;</span>1PM PST
       </div>

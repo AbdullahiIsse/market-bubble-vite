@@ -6,6 +6,7 @@ import { WatchView } from './WatchView';
 import { DashboardView } from './DashboardView';
 import { ChatColumn } from './ChatColumn';
 import { SettingsView } from './SettingsView';
+import { AdminLogin } from './AdminLogin';
 
 const MODE_KEY = 'mb-mode';
 
@@ -17,6 +18,24 @@ const MODE_KEY = 'mb-mode';
 // unchanged props to skip.
 export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Host, string> }) {
   const agg = useAggregator();
+
+  const [auth, setAuth] = useState<{ authed: boolean; required: boolean; available: boolean } | null>(null);
+  const [isAdminPath] = useState(() => window.location.pathname === '/admin');
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/admin/session')
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setAuth({ authed: !!d.authed, required: !!d.required, available: !!d.available });
+      })
+      .catch(() => {
+        if (alive) setAuth({ authed: false, required: false, available: false });
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // one-time read: the popout flag is part of the window's identity, not state
   const [isPopout] = useState(
@@ -49,6 +68,14 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
       /* private mode */
     }
   }, []);
+
+  const showSettings = !!auth && auth.available && (auth.authed || !auth.required);
+
+  const onLoginSuccess = useCallback(() => {
+    setAuth((a) => (a ? { ...a, authed: true } : { authed: true, required: true, available: true }));
+    window.history.replaceState({}, '', '/');
+    changeMode('settings');
+  }, [changeMode]);
 
   const swapHost = useCallback(() => {
     setMainHost((h) => (h === 'banks' ? 'ansem' : 'banks'));
@@ -87,17 +114,23 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
     );
   }
 
+  if (isAdminPath && (!auth || (auth.available && !auth.authed))) {
+    return <div className="app">{auth ? <AdminLogin onSuccess={onLoginSuccess} /> : null}</div>;
+  }
+
+  const effectiveMode: Mode = mode === 'settings' && !showSettings ? 'watch' : mode;
+
   return (
     <div className="app">
-      <TopBar mode={mode} onChange={changeMode} />
+      <TopBar mode={effectiveMode} onChange={changeMode} showSettings={showSettings} />
       {agg.everConnected && !agg.connected && (
         <div className="conn-banner">
           <span className="live-dot" /> Reconnecting…
         </div>
       )}
-      {mode === 'settings' ? (
+      {effectiveMode === 'settings' ? (
         <SettingsView status={agg.status} />
-      ) : mode === 'watch' ? (
+      ) : effectiveMode === 'watch' ? (
         <WatchView
           channels={twitchChannels}
           mainHost={mainHost}
