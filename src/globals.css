@@ -549,6 +549,8 @@
     .watch.layout-flipped .chat-col { border-right: none; border-top: 1px solid var(--line-soft); }
     .watch.layout-theater .chat-col { position: static; width: 100%; }
     .watch.layout-theater .stage-bar { margin-right: 0; }
+    /* page scrolls via body on mobile — let settings flow instead of nesting a scroll */
+    .settings-view { flex: none; overflow-y: visible; }
     .stage-bar { flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .social-btn { width: 34px; height: 34px; }
     .dash { padding: 12px 14px; }
@@ -608,9 +610,14 @@
 
 /* ───────── Settings view ───────── */
 .settings-view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   max-width: 720px;
   margin: 0 auto;
   padding: 28px 20px 60px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 .settings-title {
   font-size: 22px;
