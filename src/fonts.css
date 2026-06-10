@@ -1,0 +1,6 @@
+/* CSS variables formerly injected by next/font; consumed by the font stacks in
+   globals.css. Family names match the static @fontsource packages. */
+:root {
+  --font-dm-sans: 'DM Sans';
+  --font-host-grotesk: 'Host Grotesk';
+}

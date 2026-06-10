@@ -1,0 +1,49 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# vite
+/dist/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — ignore real secrets, keep the committed template
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# runtime stream settings written by the in-app Settings page (holds X cookies)
+server/streams.local.json
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# local verification screenshots
+/scripts/shots/
+/scripts/audit-shots/
