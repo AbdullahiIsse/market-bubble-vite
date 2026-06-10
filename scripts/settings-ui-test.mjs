@@ -79,6 +79,13 @@ try {
     check('twitch banks field populated from GET', twitchBanks.length > 0, `value=${twitchBanks}`);
     check('x broadcast field present', await page.locator('#x-banks').count() === 1);
     check('cookie field is password type', (await page.getAttribute('#x-auth-token', 'type')) === 'password');
+
+    await page.fill('#twitch-banks', 'sodapoppin');
+    await page.getByRole('button', { name: 'Save & reconnect' }).click();
+    await page.waitForSelector('.settings-saved', { timeout: 5000 });
+    check('save shows confirmation', await page.locator('.settings-saved').isVisible());
+    const persisted = await (await fetch(base + '/api/streams')).json();
+    check('save persisted via API', persisted.twitchChannels.banks === 'sodapoppin', `value=${persisted.twitchChannels.banks}`);
   }
 } finally {
   // Correction B: close browser first, then await child exit before cleanup

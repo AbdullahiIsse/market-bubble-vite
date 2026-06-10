@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { Host, StatusMap } from '@/shared/protocol';
 
 interface StreamsState {
@@ -8,6 +8,18 @@ interface StreamsState {
   xBroadcastIds: Record<Host, string>;
   xEnabled: boolean;
   xCookiesSet: boolean;
+}
+
+type HostMapKey = 'twitchChannels' | 'kickSlugs' | 'kickChatroomIds' | 'xBroadcastIds';
+
+interface StreamPatch {
+  twitchChannels?: Partial<Record<Host, string>>;
+  kickSlugs?: Partial<Record<Host, string>>;
+  kickChatroomIds?: Partial<Record<Host, string>>;
+  xBroadcastIds?: Partial<Record<Host, string>>;
+  xEnabled?: boolean;
+  xAuthToken?: string;
+  xCt0?: string;
 }
 
 const HOSTS: Host[] = ['banks', 'ansem'];
@@ -22,13 +34,21 @@ function SettingsViewImpl({ status }: { status: StatusMap }) {
   const [fetchError, setFetchError] = useState(false);
   const [authToken, setAuthToken] = useState('');
   const [ct0, setCt0] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const [loaded, setLoaded] = useState<StreamsState | null>(null);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
     fetch('/api/streams')
       .then((r) => r.json())
       .then((data: StreamsState) => {
-        if (alive) setForm(data);
+        if (alive) {
+          setForm(data);
+          setLoaded(data);
+        }
       })
       .catch(() => {
         if (alive) setFetchError(true);
@@ -37,6 +57,57 @@ function SettingsViewImpl({ status }: { status: StatusMap }) {
       alive = false;
     };
   }, []);
+
+  async function save() {
+    if (!form || !loaded || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    setSaved(false);
+    setError('');
+    const patch: StreamPatch = {};
+    const hostKeys: HostMapKey[] = ['twitchChannels', 'kickSlugs', 'kickChatroomIds', 'xBroadcastIds'];
+    for (const key of hostKeys) {
+      const cur = form[key];
+      const was = loaded[key];
+      const diff: Partial<Record<Host, string>> = {};
+      for (const host of HOSTS) if (cur[host] !== was[host]) diff[host] = cur[host];
+      if (Object.keys(diff).length) patch[key] = diff;
+    }
+    if (form.xEnabled !== loaded.xEnabled) patch.xEnabled = form.xEnabled;
+    if (authToken) patch.xAuthToken = authToken; // omit when empty => keep existing
+    if (ct0) patch.xCt0 = ct0;
+
+    try {
+      const res = await fetch('/api/streams', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'save failed');
+      } else {
+        setForm(data);
+        setLoaded(data);
+        setAuthToken('');
+        setCt0('');
+        setSaved(true);
+      }
+    } catch {
+      setError('network error');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function reconnectAll() {
+    await fetch('/api/streams/reconnect', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ platform: 'all' }),
+    }).catch(() => {});
+  }
 
   if (!form) {
     return (
@@ -122,6 +193,17 @@ function SettingsViewImpl({ status }: { status: StatusMap }) {
             placeholder={form.xCookiesSet ? 'saved — type to replace' : 'paste ct0 cookie'}
           />
         </fieldset>
+
+        <div className="settings-actions">
+          <button type="button" className="settings-save" disabled={saving} onClick={save}>
+            {saving ? 'Saving…' : 'Save & reconnect'}
+          </button>
+          <button type="button" className="settings-reconnect" onClick={reconnectAll}>
+            Reconnect all
+          </button>
+          {saved && <span className="settings-saved">Saved ✓</span>}
+          {error && <span className="settings-error">{error}</span>}
+        </div>
       </form>
     </div>
   );
