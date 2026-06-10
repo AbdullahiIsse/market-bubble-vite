@@ -71,10 +71,10 @@ KICK_CHATROOM_ID_ANSEM=...
 Defaults are the show's channels. Point them at **any currently-live channels** to test off-air:
 
 ```ini
-TWITCH_CHANNEL_BANKS=jynxzi
-TWITCH_CHANNEL_ANSEM=xqc
-KICK_SLUG_BANKS=westcol
-KICK_SLUG_ANSEM=trainwreckstv
+TWITCH_CHANNEL_BANKS=banks
+TWITCH_CHANNEL_ANSEM=ansem
+KICK_SLUG_BANKS=banks
+KICK_SLUG_ANSEM=ansem
 ```
 
 ### 4. X experimental reader (optional, owner-only)
