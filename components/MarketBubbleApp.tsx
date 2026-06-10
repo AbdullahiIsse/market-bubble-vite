@@ -5,6 +5,7 @@ import { TopBar, type Mode } from './TopBar';
 import { WatchView } from './WatchView';
 import { DashboardView } from './DashboardView';
 import { ChatColumn } from './ChatColumn';
+import { SettingsView } from './SettingsView';
 
 const MODE_KEY = 'mb-mode';
 
@@ -37,7 +38,7 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
   useEffect(() => {
     const stored = localStorage.getItem(MODE_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored === 'watch' || stored === 'dashboard') setMode(stored);
+    if (stored === 'watch' || stored === 'dashboard' || stored === 'settings') setMode(stored);
   }, []);
 
   const changeMode = useCallback((m: Mode) => {
@@ -94,7 +95,9 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
           <span className="live-dot" /> Reconnecting…
         </div>
       )}
-      {mode === 'watch' ? (
+      {mode === 'settings' ? (
+        <SettingsView status={agg.status} />
+      ) : mode === 'watch' ? (
         <WatchView
           channels={twitchChannels}
           mainHost={mainHost}

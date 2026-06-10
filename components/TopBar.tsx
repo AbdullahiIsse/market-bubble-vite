@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-export type Mode = 'watch' | 'dashboard';
+export type Mode = 'watch' | 'dashboard' | 'settings';
 
 function Logo() {
   return (
@@ -15,6 +15,7 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
   const tabs: [Mode, string][] = [
     ['watch', 'Watch'],
     ['dashboard', 'Dashboard'],
+    ['settings', 'Settings'],
   ];
   return (
     <nav className="mode-tabs" aria-label="View mode">
