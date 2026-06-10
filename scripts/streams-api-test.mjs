@@ -25,7 +25,7 @@ async function stopServer(c) {
 
 function startServer() {
   return spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server/index.ts'], {
-    env: { ...process.env, PORT: String(PORT), SIM_MODE: '1', STREAMS_CONFIG_PATH: streamsFile, NODE_ENV: 'production' },
+    env: { ...process.env, PORT: String(PORT), SIM_MODE: '1', STREAMS_CONFIG_PATH: streamsFile, NODE_ENV: 'development' },
     stdio: 'ignore',
   });
 }

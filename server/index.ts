@@ -18,19 +18,34 @@ import type { SourceManager } from './source-manager';
 import { fetchHostAvatars } from './lib/avatars';
 import { scoped } from './lib/log';
 import { z } from 'zod';
+import {
+  signSession,
+  verifySession,
+  parseCookie,
+  constantTimeEqual,
+  gateState,
+  createLoginLimiter,
+  ADMIN_COOKIE,
+  type LoginLimiter,
+} from './lib/admin-auth';
 
 const log = scoped('server');
+const ADMIN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 interface ApiDeps {
   runtime: RuntimeConfig;
   hub: Hub;
   getManager: () => SourceManager | null;
   getAvatars: () => HostAvatars;
+  dev: boolean;
+  limiter: LoginLimiter;
 }
 
 const ReconnectSchema = z.object({
   platform: z.enum(['twitch', 'kick', 'x', 'all']),
 });
+
+const LoginSchema = z.object({ password: z.string() });
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -68,6 +83,29 @@ function readJsonBody(req: IncomingMessage): Promise<unknown> {
   });
 }
 
+// Client IP for login rate-limiting. X-Forwarded-For is client-controlled, so only
+// trust it when explicitly behind a proxy (TRUST_PROXY=1). A directly-exposed server
+// must use remoteAddress, or an attacker could rotate XFF to dodge the lockout.
+function clientIp(req: IncomingMessage): string {
+  if (process.env.TRUST_PROXY === '1') {
+    const xff = req.headers['x-forwarded-for'];
+    if (typeof xff === 'string' && xff.length) return xff.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function setSessionCookie(res: ServerResponse, value: string, dev: boolean, ttlMs: number) {
+  const attrs = [`${ADMIN_COOKIE}=${value}`, 'HttpOnly', 'Path=/', 'SameSite=Strict', `Max-Age=${Math.floor(ttlMs / 1000)}`];
+  if (!dev) attrs.push('Secure');
+  res.setHeader('Set-Cookie', attrs.join('; '));
+}
+
+function clearSessionCookie(res: ServerResponse, dev: boolean) {
+  const attrs = [`${ADMIN_COOKIE}=`, 'HttpOnly', 'Path=/', 'SameSite=Strict', 'Max-Age=0'];
+  if (!dev) attrs.push('Secure');
+  res.setHeader('Set-Cookie', attrs.join('; '));
+}
+
 async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDeps): Promise<boolean> {
   let pathname = '/';
   try {
@@ -78,6 +116,76 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
   if (!pathname.startsWith('/api/')) return false;
   const method = req.method || 'GET';
   const config = deps.runtime.getConfig();
+
+  const state = gateState({ configured: config.admin.configured, dev: deps.dev });
+  const authed = verifySession(config.admin.sessionSecret, parseCookie(req.headers.cookie, ADMIN_COOKIE));
+
+  if (pathname === '/api/admin/session' && (method === 'GET' || method === 'HEAD')) {
+    const body = JSON.stringify({ authed, required: state === 'required', available: state !== 'disabled' });
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(method === 'HEAD' ? undefined : body);
+    return true;
+  }
+
+  if (pathname === '/api/admin/login' && method === 'POST') {
+    if (!sameOrigin(req)) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return true;
+    }
+    if (state !== 'required') {
+      sendJson(res, 404, { error: 'admin not configured' });
+      return true;
+    }
+    const ip = clientIp(req);
+    const lock = deps.limiter.check(ip);
+    if (lock.locked) {
+      sendJson(res, 429, { error: 'too many attempts', retryAfter: lock.retryAfterMs });
+      return true;
+    }
+    let raw: unknown;
+    try {
+      raw = await readJsonBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'invalid json' });
+      return true;
+    }
+    const parsed = LoginSchema.safeParse(raw);
+    if (!parsed.success) {
+      sendJson(res, 400, { error: 'invalid input' });
+      return true;
+    }
+    if (!constantTimeEqual(parsed.data.password, config.admin.password)) {
+      deps.limiter.fail(ip);
+      sendJson(res, 401, { error: 'wrong password' });
+      return true;
+    }
+    deps.limiter.reset(ip);
+    setSessionCookie(res, signSession(config.admin.sessionSecret, ADMIN_TTL_MS), deps.dev, ADMIN_TTL_MS);
+    sendJson(res, 200, { ok: true });
+    return true;
+  }
+
+  if (pathname === '/api/admin/logout' && method === 'POST') {
+    if (!sameOrigin(req)) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return true;
+    }
+    clearSessionCookie(res, deps.dev);
+    sendJson(res, 200, { ok: true });
+    return true;
+  }
+
+  // gate the settings surface
+  if (pathname === '/api/streams' || pathname === '/api/streams/reconnect') {
+    if (state === 'disabled') {
+      sendJson(res, 503, { error: 'admin not configured' });
+      return true;
+    }
+    if (state === 'required' && !authed) {
+      sendJson(res, 401, { error: 'unauthorized' });
+      return true;
+    }
+  }
 
   // boot bootstrap consumed by src/main.tsx
   if (pathname === '/api/config' && (method === 'GET' || method === 'HEAD')) {
@@ -156,7 +264,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
   }
 
   const known =
-    pathname === '/api/config' || pathname === '/api/streams' || pathname === '/api/streams/reconnect';
+    pathname === '/api/config' ||
+    pathname === '/api/streams' ||
+    pathname === '/api/streams/reconnect' ||
+    pathname === '/api/admin/session' ||
+    pathname === '/api/admin/login' ||
+    pathname === '/api/admin/logout';
   sendJson(res, known ? 405 : 404, { error: known ? 'Method Not Allowed' : 'Not Found' });
   return true;
 }
@@ -169,6 +282,7 @@ async function main() {
   const port = config.port;
 
   const hub = createHub();
+  const limiter = createLoginLimiter();
   let started: { stop: () => void | Promise<void>; manager: SourceManager | null } | null = null;
 
   let hostAvatars: HostAvatars = {};
@@ -185,6 +299,8 @@ async function main() {
     hub,
     getManager: () => started?.manager ?? null,
     getAvatars: () => hostAvatars,
+    dev,
+    limiter,
   };
 
   let webHandler: (req: IncomingMessage, res: ServerResponse) => void = (_req, res) => {
