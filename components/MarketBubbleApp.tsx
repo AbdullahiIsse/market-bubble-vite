@@ -134,6 +134,21 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
     return <div className="app">{auth ? <AdminLogin onSuccess={onLoginSuccess} /> : null}</div>;
   }
 
+  if (isAdminPath && auth && !auth.available) {
+    return (
+      <div className="app">
+        <div className="admin-login">
+          <div className="admin-login-card">
+            <h1 className="admin-login-title">Admin</h1>
+            <p className="admin-login-error">
+              Admin isn't configured on this server — set ADMIN_PASSWORD to enable it.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const effectiveMode: Mode = mode === 'settings' && !showSettings ? 'watch' : mode;
 
   return (

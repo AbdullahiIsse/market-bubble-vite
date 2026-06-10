@@ -120,11 +120,16 @@ function SettingsViewImpl({
   }
 
   async function reconnectAll() {
-    await fetch('/api/streams/reconnect', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ platform: 'all' }),
-    }).catch(() => {});
+    try {
+      const res = await fetch('/api/streams/reconnect', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ platform: 'all' }),
+      });
+      if (res.status === 401) onUnauthorized();
+    } catch {
+      /* ignore network errors */
+    }
   }
 
   if (!form) {
