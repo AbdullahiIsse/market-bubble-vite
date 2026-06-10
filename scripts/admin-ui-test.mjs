@@ -75,6 +75,19 @@ try {
   check('after login the settings form loads', await page.locator('.settings-form').isVisible());
   check('after login the Settings tab exists', (await page.getByRole('button', { name: 'Settings' }).count()) === 1);
 
+  // a logged-in admin who reloads (or after a redeploy, cookie still valid) must
+  // land on Watch — Settings is never the persisted landing
+  const sess2 = page.waitForResponse((r) => r.url().includes('/api/admin/session'), { timeout: 15000 });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await sess2;
+  await page.getByRole('button', { name: 'Watch' }).waitFor({ timeout: 10000 });
+  check('reload lands on Watch, not Settings', (await page.locator('.mode-tab.is-active').textContent())?.trim() === 'Watch');
+  check('Settings tab still present when authed', (await page.getByRole('button', { name: 'Settings' }).count()) === 1);
+
+  // navigate back into Settings to exercise logout
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.waitForSelector('.settings-form', { timeout: 10000 });
+
   await page.getByRole('button', { name: 'Log out' }).click();
   // deterministic: wait for the Settings tab to be removed from the DOM after logout
   await page.getByRole('button', { name: 'Settings' }).waitFor({ state: 'detached', timeout: 5000 });

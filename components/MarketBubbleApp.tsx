@@ -56,14 +56,19 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
   // match, then we restore the stored value once on the client.
   useEffect(() => {
     const stored = localStorage.getItem(MODE_KEY);
+    // Settings is a transient admin view, NEVER the persisted landing — only
+    // Watch/Dashboard restore, so a logged-in admin (valid cookie across a
+    // redeploy) lands on the stream, not the settings editor.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored === 'watch' || stored === 'dashboard' || stored === 'settings') setMode(stored);
+    if (stored === 'watch' || stored === 'dashboard') setMode(stored);
   }, []);
 
   const changeMode = useCallback((m: Mode) => {
     setMode(m);
     try {
-      localStorage.setItem(MODE_KEY, m);
+      // don't persist 'settings' (and don't clobber the last Watch/Dashboard
+      // choice) so it never becomes the default landing on reload
+      if (m !== 'settings') localStorage.setItem(MODE_KEY, m);
     } catch {
       /* private mode */
     }
