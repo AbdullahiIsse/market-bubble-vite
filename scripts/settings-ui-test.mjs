@@ -73,6 +73,12 @@ try {
 
     check('settings view renders', await page.locator('.settings-view').isVisible());
     check('settings tab active', (await page.locator('.mode-tab.is-active').textContent())?.trim() === 'Settings');
+
+    await page.waitForSelector('.settings-form', { timeout: 5000 });
+    const twitchBanks = await page.inputValue('#twitch-banks');
+    check('twitch banks field populated from GET', twitchBanks.length > 0, `value=${twitchBanks}`);
+    check('x broadcast field present', await page.locator('#x-banks').count() === 1);
+    check('cookie field is password type', (await page.getAttribute('#x-auth-token', 'type')) === 'password');
   }
 } finally {
   // Correction B: close browser first, then await child exit before cleanup
