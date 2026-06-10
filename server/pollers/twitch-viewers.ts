@@ -20,6 +20,7 @@ export function startTwitchViewerPoller(hub: Hub, config: AppConfig): () => void
   async function poll() {
     if (stopped) return;
     const token = await getTwitchAppToken(config);
+    if (stopped) return; // a restart/stop during the await must not write stale data
     if (!token) {
       hub.setPlatformViewers('twitch', { banks: null, ansem: null }, false);
     } else {
@@ -32,6 +33,7 @@ export function startTwitchViewerPoller(hub: Hub, config: AppConfig): () => void
         const data = await fetchJson<HelixStreams>(url, {
           headers: { 'Client-Id': config.twitch.clientId, Authorization: 'Bearer ' + token },
         });
+        if (stopped) return;
         const counts: HostCounts = { banks: 0, ansem: 0 }; // queried OK => absent = offline (0)
         let anyLive = false;
         for (const s of data.data || []) {
@@ -45,6 +47,7 @@ export function startTwitchViewerPoller(hub: Hub, config: AppConfig): () => void
         }
         hub.setPlatformViewers('twitch', counts, anyLive);
       } catch (err) {
+        if (stopped) return;
         log.warn('poll failed', (err as Error).message);
         hub.setPlatformViewers('twitch', { banks: null, ansem: null }, false);
       }

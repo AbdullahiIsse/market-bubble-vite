@@ -76,6 +76,7 @@ export function startKickViewerPoller(hub: Hub, config: AppConfig): () => void {
     let result: { counts: HostCounts; anyLive: boolean } | null = null;
     if (token) result = await viaOfficial(token);
     if (!result) result = await viaWeb();
+    if (stopped) return; // a restart/stop during the awaits must not write stale data
     hub.setPlatformViewers('kick', result.counts, result.anyLive);
     if (!stopped) timer = setTimeout(poll, config.viewerPollMs);
   }

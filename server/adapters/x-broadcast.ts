@@ -91,6 +91,7 @@ export function startXSource(hub: Hub, config: AppConfig): () => void {
         headers: xHeaders(),
         timeoutMs: 12000,
       });
+      if (stopped) return; // stopped mid-poll: skip the stale write + don't reschedule
       const b = data.broadcasts?.[broadcastId];
       if (b && b.state === 'RUNNING') {
         const watching = Number(b.total_watching);
@@ -103,6 +104,7 @@ export function startXSource(hub: Hub, config: AppConfig): () => void {
       liveByHost[host] = b?.state === 'RUNNING';
       pushViewers();
     } catch (err) {
+      if (stopped) return;
       log.warn(`show.json ${host} failed`, (err as Error).message);
       // leave viewers[host] as-is; chat may still be running
     }
@@ -145,6 +147,7 @@ export function startXSource(hub: Hub, config: AppConfig): () => void {
         },
       );
       if (!access.endpoint || !access.access_token) throw new Error('no chat endpoint');
+      if (stopped) return; // stopped during the handshake: don't open an untracked socket
 
       // 3) connect the chat websocket: authenticate, then join the room —
       // without the join the socket stays open but silent
@@ -178,6 +181,7 @@ export function startXSource(hub: Hub, config: AppConfig): () => void {
         }
       });
     } catch (err) {
+      if (stopped) return;
       log.warn(`chat ${host} unavailable`, (err as Error).message);
       chatOk[host] = false;
       refreshStatus();
