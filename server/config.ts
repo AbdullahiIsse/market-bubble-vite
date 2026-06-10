@@ -102,7 +102,16 @@ export interface AppConfig {
 }
 
 export function loadConfig(): AppConfig {
-  const e = EnvSchema.parse(process.env);
+  let e: z.infer<typeof EnvSchema>;
+  try {
+    e = EnvSchema.parse(process.env);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const issues = err.issues.map((i) => `${i.path.join('.') || '(env)'}: ${i.message}`).join('; ');
+      throw new Error('Invalid environment configuration — ' + issues);
+    }
+    throw err;
+  }
   return {
     port: e.PORT,
     twitchChannels: { banks: e.TWITCH_CHANNEL_BANKS, ansem: e.TWITCH_CHANNEL_ANSEM },
