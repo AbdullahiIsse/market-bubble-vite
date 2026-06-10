@@ -131,6 +131,13 @@ export function createRuntimeConfig(opts: { filePath?: string } = {}): RuntimeCo
       if (patch.kickSlugs?.[host] != null && patch.kickSlugs[host] !== settings.kickSlugs[host]) {
         settings.kickSlugs[host] = patch.kickSlugs[host]!;
         changed.add('kick');
+        // A slug change invalidates a pinned chatroom id that wasn't updated in the
+        // same patch — clear it so the new slug is re-resolved (or re-entered).
+        // Otherwise viewer counts would follow the new channel while chat stayed
+        // on the old chatroom (the chatroom-id override always wins in the adapter).
+        if (patch.kickChatroomIds?.[host] == null && settings.kickChatroomIds[host] !== '') {
+          settings.kickChatroomIds[host] = '';
+        }
       }
       if (patch.kickChatroomIds?.[host] != null && patch.kickChatroomIds[host] !== settings.kickChatroomIds[host]) {
         settings.kickChatroomIds[host] = patch.kickChatroomIds[host]!;

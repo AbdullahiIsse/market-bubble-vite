@@ -43,6 +43,16 @@ try {
   const r2 = rc.update({ kickChatroomIds: { ansem: '999' } });
   check('kick chatroom change -> [kick]', JSON.stringify(r2.changedPlatforms) === '["kick"]');
 
+  // a slug change clears a pinned chatroom id when the id isn't in the same patch
+  // (otherwise chat would stay on the old chatroom while viewers follow the new slug)
+  const rcKick = createRuntimeConfig({ filePath: path.join(dir, 'kick.json') });
+  rcKick.update({ kickChatroomIds: { banks: '61792777' } });
+  rcKick.update({ kickSlugs: { banks: 'newslug' } }); // slug only -> stale id clears
+  check('slug-only change clears the stale chatroom id', rcKick.getConfig().kickChatroomIds.banks === '');
+  // but a slug + id in the same patch keeps the explicitly-provided id
+  rcKick.update({ kickSlugs: { banks: 'another' }, kickChatroomIds: { banks: '12345' } });
+  check('slug + id in one patch keeps the id', rcKick.getConfig().kickChatroomIds.banks === '12345');
+
   // persistence: a fresh store from the same file restores edits (file wins over env)
   const rc2 = createRuntimeConfig({ filePath: file });
   check('persisted twitch channel restored', rc2.getConfig().twitchChannels.banks === 'jynxzi');
