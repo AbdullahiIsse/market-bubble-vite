@@ -25,6 +25,7 @@ export interface Hub {
   removeMessages(platform: Platform, sel: { ids?: string[]; user?: string }): void;
   setPlatformViewers(platform: Platform, counts: HostCounts, isLive: boolean): void;
   setStatus(platform: Platform, status: SourceStatus): void;
+  statusSnapshot(): StatusMap;
   snapshot(): Extract<ServerEvent, { type: 'snapshot' }>;
   subscribe(fn: (event: ServerEvent) => void): () => void;
 }
@@ -142,6 +143,10 @@ export function createHub(): Hub {
       if (status[platform] === status_) return;
       status[platform] = status_;
       broadcast({ type: 'status', platform, status: status_ });
+    },
+
+    statusSnapshot() {
+      return { ...status };
     },
 
     snapshot() {
