@@ -605,3 +605,126 @@
   /* host profile picture inside the .host-dot / .vt-host circles (the letter
      fallback renders when no URL). The wrapper keeps the host-colored ring. */
   .host-pic { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+
+/* ───────── Settings view ───────── */
+.settings-view {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+.settings-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.settings-sub {
+  color: var(--muted, #8b8b94);
+  margin: 0 0 22px;
+  font-size: 13px;
+}
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.settings-group {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: grid;
+  gap: 8px;
+}
+.settings-group legend {
+  padding: 0 8px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted, #8b8b94);
+}
+.settings-group label {
+  font-size: 12px;
+  color: var(--muted, #8b8b94);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.settings-group input[type='text'],
+.settings-group input:not([type]),
+.settings-group input[type='password'] {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+}
+.settings-group input:focus {
+  outline: none;
+  border-color: rgba(120, 170, 255, 0.7);
+}
+.settings-check {
+  flex-direction: row !important;
+  font-size: 14px !important;
+  color: inherit !important;
+}
+.set-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #7a7a82;
+}
+.set-status-dot.set-ok {
+  background: #3fb950;
+}
+.set-status-dot.set-reconnecting {
+  background: #d29922;
+  animation: set-pulse 1s ease-in-out infinite;
+}
+.set-status-dot.set-unavailable {
+  background: #6e6e76;
+}
+@keyframes set-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+.settings-save,
+.settings-reconnect {
+  border-radius: 8px;
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.settings-save {
+  background: #4664ff;
+  color: #fff;
+  border-color: transparent;
+}
+.settings-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.settings-reconnect {
+  background: transparent;
+  color: inherit;
+}
+.settings-saved {
+  color: #3fb950;
+  font-size: 13px;
+}
+.settings-error {
+  color: #f85149;
+  font-size: 13px;
+}

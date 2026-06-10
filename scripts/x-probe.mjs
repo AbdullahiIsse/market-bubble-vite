@@ -12,7 +12,8 @@ const DEFAULT_BEARER =
   'ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
 const raw = process.argv[2] || process.env.X_BROADCAST_ID_BANKS || '';
-const id = (raw.match(/broadcasts\/([A-Za-z0-9_-]+)/) || [, raw.trim()])[1];
+const m = raw.match(/broadcasts\/([A-Za-z0-9_-]+)/);
+const id = m ? m[1] : raw.trim();
 const { X_AUTH_TOKEN: auth, X_CT0: ct0 } = process.env;
 if (!id || !auth || !ct0) {
   console.error('need X_AUTH_TOKEN, X_CT0 and a broadcast id/url');
