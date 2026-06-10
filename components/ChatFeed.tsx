@@ -2,14 +2,17 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { ChatMessage as Msg } from '@/shared/protocol';
 import { ChatMessage } from './ChatMessage';
 
-// How many messages arrived since `prevLastId`? Batched flushes append several
-// at once, so walk back from the end instead of counting state changes.
+// How many messages were appended after `prevLastId`? Batched flushes append
+// several at once, so walk back from the end. `prevLastId` is the last id from
+// the PREVIOUS render, so it is always within the last flush of the buffer — if
+// it isn't found it was removed (moderation), not trimmed out, so nothing new
+// was appended (returning the full length here would over-count the pill).
 function appendedSince(messages: Msg[], prevLastId: string | null): number {
   if (prevLastId === null) return messages.length;
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].id === prevLastId) return messages.length - 1 - i;
   }
-  return messages.length; // previous tail already capped out of the buffer
+  return 0; // anchor gone => removed, not overflowed => no new appends to count
 }
 
 // Auto-scrolling feed. Stays pinned to the bottom; if the user scrolls up,
@@ -18,7 +21,10 @@ function appendedSince(messages: Msg[], prevLastId: string | null): number {
 export function ChatFeed({ messages, className }: { messages: Msg[]; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
-  const lastSeenId = useRef<string | null>(null);
+  // last message id at the previous render. It advances every render so the
+  // unseen count accumulates per-flush; anchoring on the *last seen* id (the old
+  // approach) over-counted to "99+" when that message was moderated away.
+  const prevLastId = useRef<string | null>(null);
   const [unseen, setUnseen] = useState(0);
 
   // Layout effect on purpose: when the buffer is at cap, a flush trims rows off
@@ -31,16 +37,16 @@ export function ChatFeed({ messages, className }: { messages: Msg[]; className?:
     if (!el) return;
     if (pinned.current) {
       el.scrollTop = el.scrollHeight;
-      lastSeenId.current = messages.length ? messages[messages.length - 1].id : null;
+      setUnseen(0); // no-op when already 0; resets if somehow pinned with a count
     } else {
-      // lastSeenId stays put while the reader is scrolled up, so this is the
-      // running total since they stopped — set it, don't accumulate.
-      setUnseen(Math.min(appendedSince(messages, lastSeenId.current), 99));
+      const added = appendedSince(messages, prevLastId.current);
+      if (added > 0) setUnseen((u) => Math.min(u + added, 99));
     }
+    prevLastId.current = messages.length ? messages[messages.length - 1].id : null;
   }, [messages]);
 
   function markSeen() {
-    lastSeenId.current = messages.length ? messages[messages.length - 1].id : null;
+    prevLastId.current = messages.length ? messages[messages.length - 1].id : null;
     setUnseen(0);
   }
 
