@@ -26,6 +26,8 @@ const child = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server/
     SIM_MODE: '1',
     STREAMS_CONFIG_PATH: path.join(dir, 's.json'),
     NODE_ENV: 'development',
+    // pin the open (ungated) state regardless of a password in .env.local
+    ADMIN_PASSWORD: '',
   },
   stdio: 'ignore',
 });
