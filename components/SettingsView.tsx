@@ -29,7 +29,15 @@ function dot(status: string) {
   return <span className={'set-status-dot set-' + status} title={status} />;
 }
 
-function SettingsViewImpl({ status }: { status: StatusMap }) {
+function SettingsViewImpl({
+  status,
+  onLogout,
+  onUnauthorized,
+}: {
+  status: StatusMap;
+  onLogout: () => void;
+  onUnauthorized: () => void;
+}) {
   const [form, setForm] = useState<StreamsState | null>(null);
   const [fetchError, setFetchError] = useState(false);
   const [authToken, setAuthToken] = useState('');
@@ -43,9 +51,15 @@ function SettingsViewImpl({ status }: { status: StatusMap }) {
   useEffect(() => {
     let alive = true;
     fetch('/api/streams')
-      .then((r) => r.json())
-      .then((data: StreamsState) => {
-        if (alive) {
+      .then((r) => {
+        if (r.status === 401) {
+          if (alive) onUnauthorized();
+          return null;
+        }
+        return r.json();
+      })
+      .then((data: StreamsState | null) => {
+        if (alive && data) {
           setForm(data);
           setLoaded(data);
         }
@@ -56,7 +70,7 @@ function SettingsViewImpl({ status }: { status: StatusMap }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [onUnauthorized]);
 
   async function save() {
     if (!form || !loaded || savingRef.current) return;
@@ -83,6 +97,10 @@ function SettingsViewImpl({ status }: { status: StatusMap }) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(patch),
       });
+      if (res.status === 401) {
+        onUnauthorized();
+        return;
+      }
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'save failed');
@@ -123,7 +141,12 @@ function SettingsViewImpl({ status }: { status: StatusMap }) {
 
   return (
     <div className="settings-view">
-      <h1 className="settings-title">Stream settings</h1>
+      <div className="settings-head">
+        <h1 className="settings-title">Stream settings</h1>
+        <button type="button" className="settings-logout" onClick={onLogout}>
+          Log out
+        </button>
+      </div>
       <p className="settings-sub">Edit a target and save — only that platform reconnects. No restart.</p>
 
       <form className="settings-form" onSubmit={(e) => e.preventDefault()}>

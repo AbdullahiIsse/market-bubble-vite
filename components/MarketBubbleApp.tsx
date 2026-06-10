@@ -20,7 +20,7 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
   const agg = useAggregator();
 
   const [auth, setAuth] = useState<{ authed: boolean; required: boolean; available: boolean } | null>(null);
-  const [isAdminPath] = useState(() => window.location.pathname === '/admin');
+  const [isAdminPath, setIsAdminPath] = useState(() => window.location.pathname === '/admin');
 
   useEffect(() => {
     let alive = true;
@@ -74,8 +74,24 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
   const onLoginSuccess = useCallback(() => {
     setAuth((a) => (a ? { ...a, authed: true } : { authed: true, required: true, available: true }));
     window.history.replaceState({}, '', '/');
+    setIsAdminPath(false);
     changeMode('settings');
   }, [changeMode]);
+
+  const onUnauthorized = useCallback(() => {
+    setAuth((a) => (a ? { ...a, authed: false } : a));
+    setMode('watch');
+  }, []);
+
+  const logout = useCallback(async () => {
+    await fetch('/api/admin/logout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }).catch(() => {});
+    setAuth((a) => (a ? { ...a, authed: false } : a));
+    setMode('watch');
+  }, []);
 
   const swapHost = useCallback(() => {
     setMainHost((h) => (h === 'banks' ? 'ansem' : 'banks'));
@@ -129,7 +145,7 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
         </div>
       )}
       {effectiveMode === 'settings' ? (
-        <SettingsView status={agg.status} />
+        <SettingsView status={agg.status} onLogout={logout} onUnauthorized={onUnauthorized} />
       ) : effectiveMode === 'watch' ? (
         <WatchView
           channels={twitchChannels}

@@ -74,6 +74,12 @@ try {
   await page.waitForSelector('.settings-form', { timeout: 10000 });
   check('after login the settings form loads', await page.locator('.settings-form').isVisible());
   check('after login the Settings tab exists', (await page.getByRole('button', { name: 'Settings' }).count()) === 1);
+
+  await page.getByRole('button', { name: 'Log out' }).click();
+  // deterministic: wait for the Settings tab to be removed from the DOM after logout
+  await page.getByRole('button', { name: 'Settings' }).waitFor({ state: 'detached', timeout: 5000 });
+  check('logout removes the Settings tab', (await page.getByRole('button', { name: 'Settings' }).count()) === 0);
+  check('logout returns to Watch', (await page.locator('.mode-tab.is-active').textContent())?.trim() === 'Watch');
 } finally {
   if (browser) await browser.close();
   await stopServer(child);
