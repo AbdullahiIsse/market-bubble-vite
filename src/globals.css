@@ -620,120 +620,196 @@
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 .settings-title {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0 0 4px;
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ivory);
+  margin: 0 0 6px;
 }
 .settings-sub {
-  color: var(--muted, #8b8b94);
-  margin: 0 0 22px;
-  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 24px;
+  font-size: 12.5px;
 }
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
 }
 .settings-group {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 16px 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 16px 18px 18px;
   display: grid;
   gap: 8px;
 }
 .settings-group legend {
   padding: 0 8px;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.02em;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--muted, #8b8b94);
+  color: var(--ivory-dim);
 }
 .settings-group label {
-  font-size: 12px;
-  color: var(--muted, #8b8b94);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 .settings-group input[type='text'],
 .settings-group input:not([type]),
 .settings-group input[type='password'] {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 9px 11px;
-  color: inherit;
-  font: inherit;
-  font-size: 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--ivory);
+  font-family: var(--mono);
+  font-size: 13px;
+  caret-color: var(--accent);
+  transition: border-color 0.2s, box-shadow 0.25s;
+}
+.settings-group input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
 }
 .settings-group input:focus {
   outline: none;
-  border-color: rgba(120, 170, 255, 0.7);
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 14px rgba(232, 255, 156, 0.1);
 }
-.settings-check {
-  flex-direction: row !important;
-  font-size: 14px !important;
-  color: inherit !important;
+.settings-group .settings-check {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ivory);
+  gap: 10px;
+  cursor: pointer;
+}
+/* custom checkbox — lime accent, dark check, same glow language as the badges */
+.settings-check input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  margin: 0;
+  display: inline-grid;
+  place-content: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.25s;
+}
+.settings-check input[type='checkbox']::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: #0a0a0a;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' d='M1.8 6.6 4.6 9.2 10.2 3'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' d='M1.8 6.6 4.6 9.2 10.2 3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.settings-check input[type='checkbox']:hover {
+  border-color: var(--accent-soft);
+}
+.settings-check input[type='checkbox']:focus-visible {
+  outline: none;
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 14px rgba(232, 255, 156, 0.18);
+}
+.settings-check input[type='checkbox']:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 14px rgba(232, 255, 156, 0.3);
+}
+.settings-check input[type='checkbox']:checked::after {
+  transform: scale(1);
 }
 .set-status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   display: inline-block;
-  background: #7a7a82;
+  background: var(--muted);
 }
 .set-status-dot.set-ok {
-  background: #3fb950;
+  background: #4ade80;
 }
 .set-status-dot.set-reconnecting {
-  background: #d29922;
-  animation: set-pulse 1s ease-in-out infinite;
+  background: #fbbf24;
+  animation: pulse 1s ease-in-out infinite;
 }
 .set-status-dot.set-unavailable {
-  background: #6e6e76;
-}
-@keyframes set-pulse {
-  50% {
-    opacity: 0.35;
-  }
+  background: var(--muted);
+  opacity: 0.6;
 }
 .settings-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 4px;
+  gap: 12px;
+  margin-top: 2px;
 }
 .settings-save,
 .settings-reconnect {
-  border-radius: 8px;
-  padding: 10px 18px;
-  font: inherit;
-  font-weight: 600;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 12.5px;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 .settings-save {
-  background: #4664ff;
-  color: #fff;
-  border-color: transparent;
+  background: var(--accent);
+  color: #0a0a0a;
+  border: 1px solid transparent;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 18px rgba(232, 255, 156, 0.22);
+  transition: box-shadow 0.25s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.settings-save:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 26px rgba(232, 255, 156, 0.4);
+  transform: translateY(-2px);
 }
 .settings-save:disabled {
   opacity: 0.6;
   cursor: default;
 }
 .settings-reconnect {
-  background: transparent;
-  color: inherit;
+  background: rgba(20, 20, 20, 0.45);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--line-soft);
+  color: var(--ivory-dim);
+  font-weight: 600;
+  transition: color 0.18s, border-color 0.2s, box-shadow 0.25s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.settings-reconnect:hover {
+  color: var(--ivory);
+  border-color: var(--accent-soft);
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(232, 255, 156, 0.12);
 }
 .settings-saved {
-  color: #3fb950;
-  font-size: 13px;
+  color: #4ade80;
+  font-size: 12.5px;
 }
 .settings-error {
-  color: #f85149;
-  font-size: 13px;
+  color: #f87171;
+  font-size: 12.5px;
 }
 
 /* ───────── Admin login + logout ───────── */
@@ -750,43 +826,64 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 28px 26px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 30px 28px;
+  border: 1px solid var(--line-soft);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(15, 15, 15, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 .admin-login-title {
-  margin: 0 0 6px;
-  font-size: 20px;
-  font-weight: 700;
+  margin: 0 0 8px;
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ivory);
 }
 .admin-login-card label {
-  font-size: 12px;
-  color: var(--muted, #8b8b94);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .admin-login-card input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
   padding: 10px 12px;
-  color: inherit;
-  font: inherit;
-  font-size: 14px;
+  color: var(--ivory);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  caret-color: var(--accent);
+  transition: border-color 0.2s, box-shadow 0.25s;
 }
 .admin-login-card input:focus {
   outline: none;
-  border-color: rgba(120, 170, 255, 0.7);
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 14px rgba(232, 255, 156, 0.1);
 }
 .admin-login-card button {
-  margin-top: 6px;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font: inherit;
-  font-weight: 600;
+  margin-top: 8px;
+  height: 40px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
-  background: #4664ff;
-  color: #fff;
+  background: var(--accent);
+  color: #0a0a0a;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 18px rgba(232, 255, 156, 0.22);
+  transition: box-shadow 0.25s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.admin-login-card button:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 26px rgba(232, 255, 156, 0.4);
+  transform: translateY(-2px);
 }
 .admin-login-card button:disabled {
   opacity: 0.6;
@@ -794,8 +891,8 @@
 }
 .admin-login-error {
   margin: 2px 0 0;
-  font-size: 13px;
-  color: #f85149;
+  font-size: 12.5px;
+  color: #f87171;
 }
 .settings-head {
   display: flex;
@@ -804,12 +901,22 @@
   gap: 12px;
 }
 .settings-logout {
-  border-radius: 8px;
-  padding: 7px 14px;
-  font: inherit;
-  font-size: 13px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: transparent;
-  color: inherit;
+  border: 1px solid var(--line-soft);
+  background: rgba(20, 20, 20, 0.45);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  color: var(--ivory-dim);
+  transition: color 0.18s, border-color 0.2s, box-shadow 0.25s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.settings-logout:hover {
+  color: var(--ivory);
+  border-color: var(--accent-soft);
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(232, 255, 156, 0.12);
 }

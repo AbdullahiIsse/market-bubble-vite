@@ -90,6 +90,21 @@ X_BROADCAST_ID_BANKS=1abcXYZ...
 
 Using your own session cookies may violate X's ToS — it's your informed choice. Never collect visitor X credentials.
 
+## Admin gate & live stream settings
+
+The **Settings** tab edits the stream targets at runtime — no restart needed:
+
+- Per host: Twitch channel, Kick slug (+ optional chatroom id), X broadcast URL.
+- Shared X account: enable toggle plus the `auth_token` / `ct0` cookies (write-only — the API never sends them back, only an "is set" flag).
+- Saving reconnects **only the platforms that changed**; *Reconnect all* force-reconnects everything.
+- Changes persist to `server/streams.local.json` (gitignored — it can hold the X cookies) and take precedence over `.env.local` across restarts.
+
+Access control:
+
+- `ADMIN_PASSWORD` **unset** — Settings is open in local dev and **disabled entirely in production**.
+- `ADMIN_PASSWORD` **set** — `/admin` shows a login gate for the Settings page and its APIs. The session is a signed cookie; set `SESSION_SECRET` to a long random value in production so logins survive restarts. The login endpoint is rate-limited.
+- Behind a reverse proxy or PaaS, set `TRUST_PROXY=1` so the rate limiter reads the real client IP from `X-Forwarded-For` (leave it unset on a directly-exposed server).
+
 ## Scripts
 
 | Script | What it does |
@@ -101,13 +116,6 @@ Using your own session cookies may violate X's ToS — it's your informed choice
 | `npm run typecheck` | App + server TypeScript checks |
 | `npm run lint` | ESLint |
 
-## Verifying
-
-- **UI (sim):** `npm run dev:sim`, compare against `design-reference/screenshots/`. Capture states with `node scripts/shots.mjs` (requires `npx playwright install chromium`).
-- **Full regression:** `AUDIT_BASE=http://localhost:3001 node scripts/audit.mjs` (every interaction in the handoff), `AUDIT_BASE=http://localhost:3001 node scripts/chatfeed-pin-test.mjs` (feed stays pinned to the bottom under load; `PIN_CPU_THROTTLE=4` for the load case).
-- **Performance:** `AUDIT_BASE=http://localhost:3001 PERF_CPU_THROTTLE=4 node scripts/perf-test.mjs` — FPS, long tasks, and message throughput under load. Run a second instance beside your main dev server with `PORT=3001 SIM_MODE=1 SIM_RATE=9000 npx tsx server/index.ts` (add `VITE_CACHE_DIR=node_modules/.vite-test` if the two instances ever fight over the dep cache).
-- **Real chat:** point the channel env vars at live channels → the merged feed fills with correctly-tagged messages; the connection dots in the chat header go green.
-
 ## Deployment
 
 This app ships its own Node server. Deploy to any Node host (Railway, Fly, a VPS) with:
@@ -116,6 +124,8 @@ This app ships its own Node server. Deploy to any Node host (Railway, Fly, a VPS
 npm run build && npm run start
 ```
 
+Set `ADMIN_PASSWORD` and `SESSION_SECRET` in the host's environment if you want the Settings page available in production (it is disabled otherwise), and `TRUST_PROXY=1` when running behind a proxy/PaaS.
+
 Behind a reverse proxy, forward the `Upgrade` header so `/ws` works. The Twitch embed `parent` uses the request hostname automatically.
 
 The aggregation hub lives in memory, so run a **single instance** (scale vertically). Walburn (the display font) is currently hotlinked from the Framer CDN — license and self-host it into `public/fonts/` before launch.
@@ -123,11 +133,12 @@ The aggregation hub lives in memory, so run a **single instance** (scale vertica
 ## Project structure
 
 ```
-server/      custom server, hub, ws-gateway, adapters/ (twitch-irc, kick-pusher,
-             x-broadcast, sim), pollers/, lib/
+server/      custom server, hub, ws-gateway, runtime-config (admin-editable
+             stream settings), adapters/ (twitch-irc, kick-pusher, x-broadcast,
+             sim), pollers/, lib/ (admin-auth, tokens, http, log, …)
 shared/      protocol.ts (ws message shapes) + meta.ts (brand constants)
 src/         main.tsx (config fetch → render bootstrap), fonts.css,
              globals.css (verbatim design port); index.html at the root
-components/   1:1 React port of the handoff UI
+components/  1:1 React port of the handoff UI + AdminLogin / SettingsView
 hooks/       useAggregator (ws client), useCountdown
 ```

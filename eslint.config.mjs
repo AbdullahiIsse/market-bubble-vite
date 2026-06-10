@@ -5,13 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 export default defineConfig([
-  globalIgnores([
-    'dist/**',
-    'node_modules/**',
-    'design-reference/**',
-    'scripts/shots/**',
-    'scripts/audit-shots/**',
-  ]),
+  globalIgnores(['dist/**', 'node_modules/**', 'design-reference/**']),
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -28,6 +22,4 @@ export default defineConfig([
     // protocol adapters match control chars on purpose (IRC CTCP \x01 frames)
     rules: { 'no-control-regex': 'off' },
   },
-  // Playwright scripts run Node code AND page.evaluate browser code.
-  { files: ['scripts/**/*.mjs'], languageOptions: { globals: { ...globals.node, ...globals.browser } } },
 ]);
