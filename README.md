@@ -1,8 +1,38 @@
 # Market Bubble Live — Unified Chat Aggregator
 
-A live dashboard for **marketbubble.com** that merges the chats of **Banks** and **Ansem** across **Twitch, Kick, and X** (six channels) into one real-time feed, shows a combined viewer count with a per-channel breakdown, lets viewers watch either host's stream beside the merged chat, and gives the owners a Dashboard view of the whole audience. The feed is **read-only** — to chat, viewers post in the host's Twitch/Kick/X channel directly.
+Built for the **Market Bubble $10,000 Vibe Code Challenge**: *"Unified chat aggregator — Twitch + X + Kick in one real-time feed with source labels."*
+
+**🎥 Video demo:** [Watch on YouTube](https://www.youtube.com/watch?v=NJ-t8E1PmiU)
+
+[![Market Bubble Live — demo video](https://img.youtube.com/vi/NJ-t8E1PmiU/maxresdefault.jpg)](https://www.youtube.com/watch?v=NJ-t8E1PmiU)
+
+## What it is
+
+A live dashboard for **marketbubble.com** that merges the chats of **Banks** and **Ansem** across **Twitch, Kick, and X** (six channels) into one real-time feed with source labels, shows a combined viewer count with a per-channel breakdown, lets viewers watch either host's stream beside the merged chat, and gives the owners a Dashboard view of the whole audience. The feed is **read-only** — to chat, viewers post in the host's Twitch/Kick/X channel directly.
 
 This is a production implementation of the design handoff in [`design-reference/`](./design-reference) — the prototype's client-side simulation (`chat-sim.js`) has been replaced with a real aggregation server.
+
+## Screenshots
+
+### Watch tab
+Both hosts' streams side by side with the merged Twitch + Kick + X chat — every message tagged with its source platform.
+
+![Watch tab — dual stream view with merged chat](docs/screenshots/watch-tab.png)
+
+### Dashboard tab
+Combined audience count with live per-platform breakdown (Twitch / Kick / X sparklines and per-host viewer counts) above the full-width merged chat.
+
+![Dashboard tab — combined audience and per-platform breakdown](docs/screenshots/dashboard-tab.png)
+
+### Stream Settings tab
+Owner-only runtime configuration: change each host's Twitch channel, Kick slug, and X broadcast without restarting the server.
+
+![Stream Settings tab — runtime stream configuration](docs/screenshots/stream-settings-tab.png)
+
+### Admin login
+Password gate protecting the Settings page in production.
+
+![Admin login gate](docs/screenshots/admin-login.png)
 
 ## How it works
 
