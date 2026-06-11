@@ -20,6 +20,10 @@ const HISTORY_CAP = 60; // sparkline samples per platform
 const DEDUPE_CAP = 500; // recent ids kept to drop replays
 const VIEWER_DEBOUNCE_MS = 250;
 const CHAT_BATCH_MS = 50; // coalesce chat fan-out into ≤20 frames/s per client
+// Offline this long after being live = the show really ended (not a mid-show
+// stream crash or flaky poll): wipe its chat instead of leaving it under the
+// countdown.
+const CHAT_CLEAR_GRACE_MS = 2 * 60 * 1000;
 
 export interface Hub {
   ingestMessage(msg: ChatMessage): void;
@@ -33,7 +37,8 @@ export interface Hub {
   subscribe(fn: (event: ServerEvent) => void): () => void;
 }
 
-export function createHub(): Hub {
+export function createHub(opts: { chatClearGraceMs?: number } = {}): Hub {
+  const chatClearGraceMs = opts.chatClearGraceMs ?? CHAT_CLEAR_GRACE_MS;
   const messages: ChatMessage[] = [];
   const recentIds = new Set<string>();
   const recentOrder: string[] = [];
@@ -56,6 +61,10 @@ export function createHub(): Hub {
   let viewerTimer: NodeJS.Timeout | null = null;
   let chatQueue: ChatMessage[] = [];
   let chatTimer: NodeJS.Timeout | null = null;
+  // live→offline transition tracking for the chat wipe; uses only KNOWN live
+  // flags from real polls, so the boot "unknown" state never arms the timer
+  let wasAnyLive = false;
+  let chatClearTimer: NodeJS.Timeout | null = null;
 
   function broadcast(event: ServerEvent) {
     for (const fn of subscribers) {
@@ -90,6 +99,42 @@ export function createHub(): Hub {
     const batch = chatQueue;
     chatQueue = [];
     broadcast({ type: 'chat_batch', messages: batch });
+  }
+
+  function buildSnapshot(): Extract<ServerEvent, { type: 'snapshot' }> {
+    // Queued chat must not arrive again after a snapshot that already
+    // contains it: flush to existing clients first. (The connecting client
+    // either isn't subscribed yet, or its snapshot handler clears pending.)
+    flushChat();
+    return {
+      type: 'snapshot',
+      messages: messages.slice(-SNAPSHOT_CAP),
+      viewers: cloneMatrix(viewers),
+      history: {
+        twitch: history.twitch.slice(),
+        kick: history.kick.slice(),
+        x: history.x.slice(),
+      },
+      status: { ...status },
+      live: overallLive(),
+      twitchChannels: { ...twitchChannels },
+    };
+  }
+
+  // Wipe the ended show's chat everywhere: ring buffer, unsent queue, dedupe,
+  // then push a fresh snapshot — clients replace their whole message list on
+  // snapshot (the reconnect path), so no new protocol event is needed.
+  function clearChat() {
+    if (messages.length === 0 && chatQueue.length === 0) return;
+    messages.length = 0;
+    chatQueue = [];
+    if (chatTimer) {
+      clearTimeout(chatTimer);
+      chatTimer = null;
+    }
+    recentIds.clear();
+    recentOrder.length = 0;
+    broadcast(buildSnapshot());
   }
 
   function remember(id: string) {
@@ -131,6 +176,22 @@ export function createHub(): Hub {
       const arr = history[platform];
       arr.push(platformTotal(viewers, platform));
       if (arr.length > HISTORY_CAP) arr.splice(0, arr.length - HISTORY_CAP);
+      const anyLive = PLATFORMS.some((p) => liveByPlatform[p]);
+      if (anyLive !== wasAnyLive) {
+        wasAnyLive = anyLive;
+        if (anyLive) {
+          // back before the grace elapsed — the show didn't actually end
+          if (chatClearTimer) {
+            clearTimeout(chatClearTimer);
+            chatClearTimer = null;
+          }
+        } else {
+          chatClearTimer = setTimeout(() => {
+            chatClearTimer = null;
+            clearChat();
+          }, chatClearGraceMs);
+        }
+      }
       // coalesce: three pollers landing together emit one event
       if (viewerTimer) return;
       viewerTimer = setTimeout(() => {
@@ -160,23 +221,7 @@ export function createHub(): Hub {
     },
 
     snapshot() {
-      // Queued chat must not arrive again after a snapshot that already
-      // contains it: flush to existing clients first. (The connecting client
-      // either isn't subscribed yet, or its snapshot handler clears pending.)
-      flushChat();
-      return {
-        type: 'snapshot',
-        messages: messages.slice(-SNAPSHOT_CAP),
-        viewers: cloneMatrix(viewers),
-        history: {
-          twitch: history.twitch.slice(),
-          kick: history.kick.slice(),
-          x: history.x.slice(),
-        },
-        status: { ...status },
-        live: overallLive(),
-        twitchChannels: { ...twitchChannels },
-      };
+      return buildSnapshot();
     },
 
     subscribe(fn) {
