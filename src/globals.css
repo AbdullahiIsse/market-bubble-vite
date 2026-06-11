@@ -238,6 +238,7 @@
   .tag-swap:hover { color: var(--accent); }
   .tag-swap svg { flex: none; }
   .tag-swap-name { flex: none; }
+  .tag-platform { display: inline-flex; align-items: center; flex: none; }
   /* offline state — off-air interstitial. The hero photo is dimmed behind a
      scrim so the countdown always has contrast (the card in the photo is
      bright), and type is sized with container-query units (cqmin/cqi against

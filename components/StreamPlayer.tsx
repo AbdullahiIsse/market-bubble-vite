@@ -4,6 +4,7 @@ import { HOST_META, PLATFORM_META } from '@/shared/meta';
 import { pickPlayerPlatform, type PlayerPlatform } from '@/shared/player-source';
 import { useCountdown } from '@/hooks/useCountdown';
 import { HostGlyph } from './HostGlyph';
+import { PlatformIcon } from './PlatformIcon';
 
 const HERO_IMG =
   'https://framerusercontent.com/images/ddD68QwxkKIzKFvThRqR9GgDCbw.png?scale-down-to=2048';
@@ -123,6 +124,9 @@ export const StreamPlayer = memo(function StreamPlayer({
           <HostGlyph host={mainHost} />
         </span>
         <span className="player-tag-text">{HOST_META[mainHost].name}&rsquo;s stream</span>
+        <span className="tag-platform" title={'Watching on ' + PLATFORM_META[platform].name}>
+          <PlatformIcon platform={platform} size={12} />
+        </span>
         <button
           className="tag-swap"
           onClick={onSwap}
