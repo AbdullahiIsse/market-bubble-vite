@@ -35,7 +35,7 @@ export interface Hub {
   setPlatformViewers(platform: Platform, counts: HostCounts, isLive: boolean): void;
   setStatus(platform: Platform, status: SourceStatus): void;
   // seeded at boot, re-pushed after every settings save; broadcasts only on change
-  setTwitchChannels(channels: Record<Host, string>): void;
+  setChannels(next: { twitchChannels: Record<Host, string>; kickSlugs: Record<Host, string> }): void;
   statusSnapshot(): StatusMap;
   snapshot(): Extract<ServerEvent, { type: 'snapshot' }>;
   subscribe(fn: (event: ServerEvent) => void): () => void;
@@ -63,6 +63,7 @@ export function createHub(
     x: 'unavailable',
   };
   let twitchChannels: Record<Host, string> = { banks: '', ansem: '' };
+  let kickSlugs: Record<Host, string> = { banks: '', ansem: '' };
 
   const subscribers = new Set<(event: ServerEvent) => void>();
   let viewerTimer: NodeJS.Timeout | null = null;
@@ -127,6 +128,7 @@ export function createHub(
       status: { ...status },
       live: overallLive(),
       twitchChannels: { ...twitchChannels },
+      kickSlugs: { ...kickSlugs },
     };
   }
 
@@ -240,10 +242,20 @@ export function createHub(
       broadcast({ type: 'status', platform, status: status_ });
     },
 
-    setTwitchChannels(channels) {
-      if (channels.banks === twitchChannels.banks && channels.ansem === twitchChannels.ansem) return;
-      twitchChannels = { ...channels };
-      broadcast({ type: 'config', twitchChannels: { ...twitchChannels } });
+    setChannels(next) {
+      const twitchSame =
+        next.twitchChannels.banks === twitchChannels.banks &&
+        next.twitchChannels.ansem === twitchChannels.ansem;
+      const kickSame =
+        next.kickSlugs.banks === kickSlugs.banks && next.kickSlugs.ansem === kickSlugs.ansem;
+      if (twitchSame && kickSame) return;
+      twitchChannels = { ...next.twitchChannels };
+      kickSlugs = { ...next.kickSlugs };
+      broadcast({
+        type: 'config',
+        twitchChannels: { ...twitchChannels },
+        kickSlugs: { ...kickSlugs },
+      });
     },
 
     statusSnapshot() {

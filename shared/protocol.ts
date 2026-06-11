@@ -58,6 +58,7 @@ export type ServerEvent =
       status: StatusMap;
       live: boolean;
       twitchChannels: Record<Host, string>;
+      kickSlugs: Record<Host, string>;
     }
   // chat fan-out is coalesced server-side (~50ms window) so the wire carries
   // batches, not one frame per message
@@ -66,4 +67,4 @@ export type ServerEvent =
   | { type: 'status'; platform: Platform; status: SourceStatus }
   | { type: 'remove'; platform: Platform; ids?: string[]; user?: string }
   // admin retargeted a stream slot — the player must swap embeds without a reload
-  | { type: 'config'; twitchChannels: Record<Host, string> };
+  | { type: 'config'; twitchChannels: Record<Host, string>; kickSlugs: Record<Host, string> };

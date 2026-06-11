@@ -16,5 +16,5 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["src", "components", "hooks", "shared"],
-  "exclude": ["node_modules", "dist", "design-reference"]
+  "exclude": ["node_modules", "dist", "design-reference", "shared/**/*.test.ts"]
 }

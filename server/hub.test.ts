@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHub } from './hub';
-import type { ChatMessage, HostCounts } from '../shared/protocol';
+import type { ChatMessage, HostCounts, ServerEvent } from '../shared/protocol';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,4 +60,39 @@ test('going live cancels a pending idle wipe', async () => {
   hub.setPlatformViewers('kick', COUNTS, true); // back live before the window elapsed
   await sleep(300);
   assert.equal(hub.snapshot().messages.length, 1);
+});
+
+// Channel maps: snapshot and the config broadcast must carry BOTH the twitch
+// channels and the kick slugs, so the player can retarget either embed live.
+const TW = { banks: 'fazebanks', ansem: 'ansem' };
+const KS = { banks: 'banks-kick', ansem: 'ansem-kick' };
+
+test('snapshot and config broadcast carry both channel maps', () => {
+  const hub = createHub();
+  const events: ServerEvent[] = [];
+  hub.subscribe((e) => events.push(e));
+  hub.setChannels({ twitchChannels: TW, kickSlugs: KS });
+  const cfg = events.find((e) => e.type === 'config');
+  assert.deepEqual(cfg, { type: 'config', twitchChannels: TW, kickSlugs: KS });
+  const snap = hub.snapshot();
+  assert.deepEqual(snap.twitchChannels, TW);
+  assert.deepEqual(snap.kickSlugs, KS);
+});
+
+test('a kick-only slug change still broadcasts a config event', () => {
+  const hub = createHub();
+  hub.setChannels({ twitchChannels: TW, kickSlugs: KS });
+  const events: ServerEvent[] = [];
+  hub.subscribe((e) => events.push(e));
+  hub.setChannels({ twitchChannels: TW, kickSlugs: { ...KS, ansem: 'moved' } });
+  assert.equal(events.filter((e) => e.type === 'config').length, 1);
+});
+
+test('setChannels with unchanged values does not broadcast', () => {
+  const hub = createHub();
+  hub.setChannels({ twitchChannels: TW, kickSlugs: KS });
+  const events: ServerEvent[] = [];
+  hub.subscribe((e) => events.push(e));
+  hub.setChannels({ twitchChannels: { ...TW }, kickSlugs: { ...KS } });
+  assert.equal(events.length, 0);
 });

@@ -195,6 +195,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
   if (pathname === '/api/config' && (method === 'GET' || method === 'HEAD')) {
     sendJsonGet(res, method, {
       twitchChannels: config.twitchChannels,
+      kickSlugs: config.kickSlugs,
       xEnabled: config.x.enabled,
       hostAvatars: deps.getAvatars(),
     });
@@ -227,7 +228,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
     const { changedPlatforms, persisted } = deps.runtime.update(parsed.data);
     // push the (possibly) new channels to connected players before the slower
     // reconnect — the hub broadcasts only when they actually changed
-    deps.hub.setTwitchChannels(deps.runtime.getConfig().twitchChannels);
+    const updated = deps.runtime.getConfig();
+    deps.hub.setChannels({ twitchChannels: updated.twitchChannels, kickSlugs: updated.kickSlugs });
     const mgr = deps.getManager();
     if (mgr) {
       try {
@@ -291,7 +293,7 @@ async function main() {
   const port = config.port;
 
   const hub = createHub();
-  hub.setTwitchChannels(config.twitchChannels); // snapshots carry channels from the first client on
+  hub.setChannels({ twitchChannels: config.twitchChannels, kickSlugs: config.kickSlugs }); // snapshots carry channels from the first client on
   const limiter = createLoginLimiter();
   let started: { stop: () => void | Promise<void>; manager: SourceManager | null } | null = null;
 
