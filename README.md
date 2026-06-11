@@ -13,7 +13,7 @@ This is a production implementation of the design handoff in [`design-reference/
 [viewer polls]┘   live flag)                ─┘
 ```
 
-One Node process serves the React SPA (Vite middleware in dev, prebuilt `dist/` in prod), the `/ws` WebSocket, and the aggregation engine together (`server/index.ts`). Adapters read each platform's chat and fan into a hub; the hub broadcasts one merged stream to all browsers. The client buffers incoming messages and renders in ~100ms batches, so the UI stays smooth even when the merged feed runs at 100+ msgs/s. The app never posts to any platform.
+One Node process serves the React SPA (Vite middleware in dev, prebuilt `dist/` in prod), the `/ws` WebSocket, and the aggregation engine together (`server/index.ts`). Adapters read each platform's chat and fan into a hub; the hub broadcasts one merged stream to all browsers. The client buffers incoming messages and renders in ~100ms batches, so the UI stays smooth even when the merged feed runs at 100+ msgs/s. When the show ends (every channel stays offline for ~2 minutes — a grace period so a mid-show stream hiccup doesn't count), the hub wipes the merged chat everywhere, so the finished show's messages don't linger under the offline countdown. The app never posts to any platform.
 
 | Platform | Read chat | Viewer counts |
 |---|---|---|
@@ -71,9 +71,9 @@ KICK_CHATROOM_ID_ANSEM=...
 Defaults are the show's channels. Point them at **any currently-live channels** to test off-air:
 
 ```ini
-TWITCH_CHANNEL_BANKS=banks
+TWITCH_CHANNEL_BANKS=fazebanks
 TWITCH_CHANNEL_ANSEM=ansem
-KICK_SLUG_BANKS=banks
+KICK_SLUG_BANKS=fazebanks
 KICK_SLUG_ANSEM=ansem
 ```
 
@@ -97,7 +97,7 @@ The **Settings** tab edits the stream targets at runtime — no restart needed:
 - Per host: Twitch channel, Kick slug (+ optional chatroom id), X broadcast URL.
 - Shared X account: enable toggle plus the `auth_token` / `ct0` cookies (write-only — the API never sends them back, only an "is set" flag).
 - Saving reconnects **only the platforms that changed**; *Reconnect all* force-reconnects everything.
-- Changes persist to `server/streams.local.json` (gitignored — it can hold the X cookies) and take precedence over `.env.local` across restarts.
+- Changes persist to `server/streams.local.json` (gitignored — it can hold the X cookies; path overridable with `STREAMS_CONFIG_PATH`) and take precedence over `.env.local` across restarts.
 
 Access control:
 
@@ -125,6 +125,8 @@ npm run build && npm run start
 ```
 
 Set `ADMIN_PASSWORD` and `SESSION_SECRET` in the host's environment if you want the Settings page available in production (it is disabled otherwise), and `TRUST_PROXY=1` when running behind a proxy/PaaS.
+
+Settings saved in the admin UI persist to a JSON file — `server/streams.local.json` by default, which is **ephemeral on most PaaS hosts** (Railway, Fly): every redeploy resets it and saved stream targets fall back to the env defaults. Mount a volume and set `STREAMS_CONFIG_PATH` to a file on it (e.g. `/data/streams.json`) to keep them across deploys.
 
 Behind a reverse proxy, forward the `Upgrade` header so `/ws` works. The Twitch embed `parent` uses the request hostname automatically.
 
