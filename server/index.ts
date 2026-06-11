@@ -52,6 +52,12 @@ function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
+// GET/HEAD variant: same headers either way, no body for HEAD
+function sendJsonGet(res: ServerResponse, method: string, body: unknown) {
+  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.end(method === 'HEAD' ? undefined : JSON.stringify(body));
+}
+
 // Minimal CSRF guard: browsers send Origin on cross-site POSTs; reject mismatches.
 // Non-browser clients (our tests, curl) send no Origin and are allowed.
 function sameOrigin(req: IncomingMessage): boolean {
@@ -121,9 +127,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
   const authed = verifySession(config.admin.sessionSecret, parseCookie(req.headers.cookie, ADMIN_COOKIE));
 
   if (pathname === '/api/admin/session' && (method === 'GET' || method === 'HEAD')) {
-    const body = JSON.stringify({ authed, required: state === 'required', available: state !== 'disabled' });
-    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
-    res.end(method === 'HEAD' ? undefined : body);
+    sendJsonGet(res, method, { authed, required: state === 'required', available: state !== 'disabled' });
     return true;
   }
 
@@ -189,21 +193,17 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
 
   // boot bootstrap consumed by src/main.tsx
   if (pathname === '/api/config' && (method === 'GET' || method === 'HEAD')) {
-    const body = JSON.stringify({
+    sendJsonGet(res, method, {
       twitchChannels: config.twitchChannels,
       xEnabled: config.x.enabled,
       hostAvatars: deps.getAvatars(),
     });
-    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
-    res.end(method === 'HEAD' ? undefined : body);
     return true;
   }
 
   // settings surface: non-secret editable state + live status
   if (pathname === '/api/streams' && (method === 'GET' || method === 'HEAD')) {
-    const body = JSON.stringify({ ...deps.runtime.publicState(), status: deps.hub.statusSnapshot() });
-    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
-    res.end(method === 'HEAD' ? undefined : body);
+    sendJsonGet(res, method, { ...deps.runtime.publicState(), status: deps.hub.statusSnapshot() });
     return true;
   }
 
@@ -224,15 +224,21 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
       sendJson(res, 400, { error: 'invalid input', fields: parsed.error.flatten().fieldErrors });
       return true;
     }
-    const { changedPlatforms } = deps.runtime.update(parsed.data);
+    const { changedPlatforms, persisted } = deps.runtime.update(parsed.data);
     const mgr = deps.getManager();
     if (mgr) {
-      await Promise.all(changedPlatforms.map((p) => mgr.restart(p)));
+      try {
+        await Promise.all(changedPlatforms.map((p) => mgr.restart(p)));
+      } catch (err) {
+        // settings are already applied — a reconnect hiccup must not fail the save
+        log.error('reconnect after save failed', err instanceof Error ? err.message : String(err));
+      }
     }
     sendJson(res, 200, {
       ...deps.runtime.publicState(),
       status: deps.hub.statusSnapshot(),
       reconnected: mgr ? changedPlatforms : [],
+      persisted,
     });
     return true;
   }

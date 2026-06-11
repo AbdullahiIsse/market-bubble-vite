@@ -1,7 +1,10 @@
 // Parses process.env into a typed AppConfig. Missing platform keys are not an
 // error — the corresponding source simply boots as `unavailable`.
 import { z } from 'zod';
+import type { Host } from '../shared/protocol';
 import { randomSecret } from './lib/admin-auth';
+
+export type { Host };
 
 const bool = (def: boolean) =>
   z
@@ -29,8 +32,6 @@ const EnvSchema = z.object({
   TWITCH_CHANNEL_ANSEM: str('ansem'),
   KICK_SLUG_BANKS: str('fazebanks'),
   KICK_SLUG_ANSEM: str('ansem'),
-  X_HANDLE_BANKS: str('Banks'),
-  X_HANDLE_ANSEM: str('blknoiz06'),
 
   TWITCH_CLIENT_ID: str(''),
   TWITCH_CLIENT_SECRET: str(''),
@@ -62,14 +63,11 @@ const EnvSchema = z.object({
   VIEWER_POLL_MS: int(10000),
 });
 
-export type Host = 'banks' | 'ansem';
-
 export interface AppConfig {
   port: number;
 
   twitchChannels: Record<Host, string>;
   kickSlugs: Record<Host, string>;
-  xHandles: Record<Host, string>;
 
   twitch: { clientId: string; clientSecret: string; configured: boolean };
   kick: { clientId: string; clientSecret: string; configured: boolean };
@@ -116,7 +114,6 @@ export function loadConfig(): AppConfig {
     port: e.PORT,
     twitchChannels: { banks: e.TWITCH_CHANNEL_BANKS, ansem: e.TWITCH_CHANNEL_ANSEM },
     kickSlugs: { banks: e.KICK_SLUG_BANKS, ansem: e.KICK_SLUG_ANSEM },
-    xHandles: { banks: e.X_HANDLE_BANKS, ansem: e.X_HANDLE_ANSEM },
     twitch: {
       clientId: e.TWITCH_CLIENT_ID,
       clientSecret: e.TWITCH_CLIENT_SECRET,

@@ -4,7 +4,6 @@
 export interface Backoff {
   next(): number; // ms to wait before the next attempt
   reset(): void; // call after a connection has been stable
-  attempt(): number;
 }
 
 export function createBackoff(baseMs = 1000, capMs = 30000): Backoff {
@@ -18,9 +17,6 @@ export function createBackoff(baseMs = 1000, capMs = 30000): Backoff {
     },
     reset() {
       attempt = 0;
-    },
-    attempt() {
-      return attempt;
     },
   };
 }

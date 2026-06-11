@@ -1,4 +1,4 @@
-import { Fragment, memo, useEffect, useState } from 'react';
+import { Fragment, memo, useState } from 'react';
 import type { Host } from '@/shared/protocol';
 import { HOST_META } from '@/shared/meta';
 import { useCountdown } from '@/hooks/useCountdown';
@@ -19,20 +19,25 @@ export const StreamPlayer = memo(function StreamPlayer({
 }: {
   channels: Record<Host, string>;
   mainHost: Host;
-  live: boolean;
+  live: boolean | null; // null = not known yet (no server snapshot)
   onSwap: () => void;
 }) {
   const otherHost: Host = mainHost === 'banks' ? 'ansem' : 'banks';
   const countdown = useCountdown();
 
-  // Twitch's embed needs the exact serving hostname as `parent`. Resolve it
-  // after mount so server and client render the same initial HTML.
-  const [parent, setParent] = useState<string | null>(null);
-  useEffect(() => {
-    // hydration-safe: render no iframe on the server, attach it post-mount once
-    // the real hostname (Twitch's required `parent`) is known.
-    setParent(window.location.hostname || 'localhost');
-  }, []);
+  // Twitch's embed requires the exact serving hostname as `parent`.
+  const [parent] = useState(() => window.location.hostname || 'localhost');
+
+  // Live state unknown (websocket snapshot hasn't landed): hold a neutral hero —
+  // committing to the countdown here flashes "We're offline" over a live stream.
+  if (live === null) {
+    return (
+      <div className="player player-offline">
+        <img className="ph-bg" src={HERO_IMG} alt="Market Bubble set" />
+        <div className="offline-scrim" />
+      </div>
+    );
+  }
 
   if (!live) {
     const units: Array<[string, string]> = countdown
@@ -75,26 +80,23 @@ export const StreamPlayer = memo(function StreamPlayer({
   }
 
   const embed =
-    parent &&
     'https://player.twitch.tv/?channel=' +
-      encodeURIComponent(channels[mainHost]) +
-      '&parent=' +
-      encodeURIComponent(parent) +
-      '&muted=true&autoplay=true';
+    encodeURIComponent(channels[mainHost]) +
+    '&parent=' +
+    encodeURIComponent(parent) +
+    '&muted=true&autoplay=true';
 
   return (
     <div className="player">
-      {embed && (
-        <iframe
-          src={embed}
-          // without an explicit autoplay permission the swapped-in channel
-          // loads paused (cross-origin iframes can't autoplay by default)
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-          scrolling="no"
-          title={HOST_META[mainHost].name + ' stream'}
-        />
-      )}
+      <iframe
+        src={embed}
+        // without an explicit autoplay permission the swapped-in channel
+        // loads paused (cross-origin iframes can't autoplay by default)
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+        scrolling="no"
+        title={HOST_META[mainHost].name + ' stream'}
+      />
       <div className="player-tag">
         <span
           className="vt-host"

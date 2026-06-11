@@ -10,7 +10,7 @@ function ChatMessageImpl({ msg }: { msg: Msg }) {
   const meta = PLATFORM_META[msg.platform];
   const host = HOST_META[msg.host];
   return (
-    <div className={'msg src-' + msg.platform + ' msg-row-badge'}>
+    <div className="msg msg-row-badge">
       <span
         className={'msg-badge badge-' + msg.platform}
         title={meta.name + ' — ' + host.name + "'s channel"}

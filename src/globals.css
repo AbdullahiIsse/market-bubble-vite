@@ -1,12 +1,14 @@
 /* ============================================================================
    Market Bubble Live — global styles.
-   Ported VERBATIM from the design handoff (Market Bubble Live.html <style>).
-   Changes from the original: --sans/--mono point at the font CSS variables,
-   additive rules at the very bottom (see ADDITIONS), and one deliberate perf
-   deviation — .msg-badge no longer uses backdrop-filter (its backdrop is the
-   near-uniform dark chat column, so the per-message blur was pure paint cost;
-   do not "restore" it). The offline-state block is also redesigned (scrim +
-   segmented countdown, container-query sizing).
+   Ported from the design handoff (Market Bubble Live.html <style>) and now
+   maintained as the app's own stylesheet: handoff rules with no consumer in
+   the React app (ticker, PiP, alternate layouts/densities, dashboard side
+   boxes) are pruned. --sans/--mono point at the font CSS variables, and one
+   deliberate perf deviation — .msg-badge no longer uses backdrop-filter (its
+   backdrop is the near-uniform dark chat column, so the per-message blur was
+   pure paint cost; do not "restore" it). The offline-state block is redesigned
+   (scrim + segmented countdown, container-query sizing), and the responsive
+   section at the bottom (≤1100 / ≤900 / ≤480 / touch) is an app addition.
    ========================================================================== */
   @font-face {
     font-family: 'Walburn';
@@ -57,7 +59,8 @@
     background-repeat: repeat; background-size: 153.5px auto;
     opacity: .13;
   }
-  #root, .app { height: 100vh; position: relative; z-index: 1; display: flex; flex-direction: column; }
+  /* dvh tracks iOS Safari's collapsing toolbars; 100vh stays as the fallback */
+  #root, .app { height: 100vh; height: 100dvh; position: relative; z-index: 1; display: flex; flex-direction: column; }
 
   /* ——— Top bar ——— */
   .topbar {
@@ -153,19 +156,6 @@
     border-left: 1px solid var(--line-soft); background: rgba(10,10,10,.6);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   }
-  .watch.layout-flipped { flex-direction: row-reverse; }
-  .watch.layout-flipped .chat-col { border-left: none; border-right: 1px solid var(--line-soft); }
-
-  .watch.layout-theater { position: relative; }
-  .watch.layout-theater .stage { padding: 0; }
-  .watch.layout-theater .player { border-radius: 0; border: none; }
-  .watch.layout-theater .stage-bar { margin: 0; padding: 10px 14px; margin-right: 340px; }
-  .watch.layout-theater .chat-col {
-    position: absolute; top: 0; right: 0; bottom: 0; width: 340px;
-    background: rgba(10,10,10,.78); backdrop-filter: blur(10px);
-    border-left: 1px solid var(--line-soft);
-  }
-
   /* ——— Stage bar (viewer pill + socials under the player) ——— */
   .stage-bar { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex: none; min-width: 0; }
   .stage-bar .viewer-pill { align-items: baseline; }
@@ -196,7 +186,7 @@
     box-shadow: 0 0 16px rgba(232,255,156,.12);
   }
   /* popped-out chat window */
-  .app.popout { height: 100vh; }
+  .app.popout { height: 100vh; height: 100dvh; }
   /* the popout has no .watch wrapper, so the column needs its full layout here,
      not just the width/border overrides */
   .app.popout .chat-col {
@@ -212,7 +202,6 @@
     box-shadow: 0 30px 80px rgba(0,0,0,.6);
   }
   .player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-  .player-placeholder { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; }
   /* top-center host tag, shown while hovering anywhere over the stream */
   .player-tag {
     position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 3;
@@ -233,10 +222,7 @@
     opacity: 1; pointer-events: auto;
   }
   .player-tag:hover { border-color: var(--accent-soft); box-shadow: 0 0 16px rgba(232,255,156,.1); }
-  /* no hover on touch devices — keep the tag (and host swap) reachable */
-  @media (hover: none) {
-    .player-tag { opacity: 1; pointer-events: auto; }
-  }
+  /* (touch devices: see the "Touch ergonomics" block in the responsive section) */
   .tag-swap {
     display: inline-flex; align-items: center; gap: 6px;
     max-width: 0; opacity: 0; overflow: hidden; padding: 0; margin-left: 0;
@@ -252,30 +238,6 @@
   .tag-swap:hover { color: var(--accent); }
   .tag-swap svg { flex: none; }
   .tag-swap-name { flex: none; }
-  /* PiP — second host's stream, click to swap */
-  .pip {
-    position: absolute; right: 14px; bottom: 14px; z-index: 3;
-    width: 188px; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden;
-    border: 1px solid var(--line); cursor: pointer; padding: 0;
-    background: #000; box-shadow: 0 14px 40px rgba(0,0,0,.6);
-    transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .25s, border-color .2s;
-  }
-  .pip:hover { transform: translateY(-3px); border-color: var(--accent-soft); box-shadow: 0 18px 50px rgba(0,0,0,.7), 0 0 20px rgba(232,255,156,.12); }
-  .pip-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; }
-  .pip-label {
-    position: absolute; left: 8px; bottom: 7px; z-index: 1;
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11.5px; font-weight: 600; color: var(--ivory);
-    text-shadow: 0 1px 3px rgba(0,0,0,.8);
-  }
-  .pip-swap {
-    position: absolute; right: 7px; top: 7px; z-index: 1;
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; border-radius: 6px;
-    background: rgba(10,10,10,.65); color: var(--ivory-dim);
-    border: 1px solid var(--line-soft);
-  }
-  .pip:hover .pip-swap { color: var(--accent); }
   /* offline state — off-air interstitial. The hero photo is dimmed behind a
      scrim so the countdown always has contrast (the card in the photo is
      bright), and type is sized with container-query units (cqmin/cqi against
@@ -402,14 +364,15 @@
   }
   .new-msgs:hover { box-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 26px rgba(232,255,156,.45); }
 
-  .msg { display: flex; align-items: baseline; gap: 7px; line-height: 1.5; animation: msgIn .25s ease; }
+  .msg {
+    display: flex; align-items: baseline; gap: 7px; line-height: 1.5;
+    padding: 5.5px 4px; font-size: 13.5px;
+    animation: msgIn .25s ease;
+  }
   @keyframes msgIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .msg { animation: none; } .live-dot { animation: none; } }
-  .msg-src { display: inline-flex; align-items: center; gap: 5px; flex: none; transform: translateY(1px); opacity: .9; }
-  .msg-src-name { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
   .msg-user { font-weight: 700; flex: none; }
   .msg-text { color: var(--ivory-dim); overflow-wrap: anywhere; }
-  .msg-bar { border-left: 2px solid; padding-left: 8px; }
 
   /* badge-chip source label — inline flow so text wraps full-width like real chat */
   .msg-row-badge { display: block; }
@@ -440,39 +403,7 @@
   .badge-twitch:hover { box-shadow: 0 0 26px rgba(169,112,255,.4), 0 6px 16px rgba(0,0,0,.35); transform: translateY(-3px); }
   .badge-x      { border-color: rgba(255,255,255,.18); box-shadow: 0 0 14px rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.3); }
   .badge-x:hover      { box-shadow: 0 0 24px rgba(255,255,255,.15), 0 6px 16px rgba(0,0,0,.35); transform: translateY(-3px); }
-  .badge-bubble { border-color: rgba(232,255,156,.35); box-shadow: 0 0 14px rgba(232,255,156,.22), 0 4px 14px rgba(0,0,0,.3); }
-  .badge-bubble:hover { box-shadow: 0 0 26px rgba(232,255,156,.4), 0 6px 16px rgba(0,0,0,.35); transform: translateY(-3px); }
   @media (prefers-reduced-motion: reduce) { .msg-badge:hover { transform: translateY(-1px); } }
-  .density-compact .msg-badge { min-width: 36px; padding: 3.5px 0; border-radius: 9px; }
-  .density-ultra .msg-badge { min-width: 32px; padding: 2px 0; border-radius: 8px; }
-
-  .density-cozy .msg { padding: 5.5px 4px; font-size: 13.5px; }
-  .density-compact .msg { padding: 3px 4px; font-size: 13px; }
-  .density-ultra .msg { padding: 1px 4px; font-size: 12px; }
-
-  /* ——— Ticker ——— */
-  .ticker {
-    flex: none; overflow: hidden;
-    border: 1px solid var(--line-soft); border-radius: 12px;
-    background: rgba(20,20,20,.45);
-    background-image: linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    padding: 8px 0; display: flex; align-items: center;
-  }
-  .ticker-track { display: flex; width: 100%; }
-  .ticker-group { display: flex; flex: 1; justify-content: space-evenly; }
-  .ticker-group + .ticker-group { display: none; }
-  .tick-item { display: inline-flex; align-items: baseline; gap: 9px; padding: 0 26px; border-right: 1px solid var(--line-soft); min-width: 0; flex-shrink: 1; white-space: nowrap; }
-  .tick-item:last-child { border-right: none; }
-  .tick-label { font-size: 9.5px; letter-spacing: .22em; color: var(--muted); text-transform: uppercase; }
-  .tick-value { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--ivory); overflow: hidden; text-overflow: ellipsis; }
-  @media (max-width: 1240px) {
-    .tick-item { padding: 0 14px; gap: 6px; }
-    .tick-label { letter-spacing: .12em; }
-  }
-  @media (max-width: 1040px) {
-    .tick-item:last-child { display: none; }
-  }
 
   /* ——— Mode tabs ——— */
   .mode-tabs { display: flex; gap: 4px; }
@@ -504,60 +435,6 @@
     overflow: hidden;
   }
   .chat-wall { padding: 12px 18px 16px; }
-  .dash-side { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
-  .side-box { border: 1px solid var(--line-soft); border-radius: 14px; background: var(--panel); padding: 14px 16px; flex: none; }
-  .side-box-title {
-    font-family: var(--serif); font-size: 11.5px; font-weight: 400; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--ivory-dim); margin-bottom: 12px;
-    display: flex; align-items: baseline; justify-content: space-between;
-  }
-  .side-box-sub { font-family: var(--sans); font-size: 9px; letter-spacing: .1em; color: var(--muted); text-transform: none; }
-  .top-chatters { display: flex; flex-direction: column; gap: 7px; }
-  .tc-row { display: flex; align-items: center; gap: 8px; }
-  .tc-user { font-size: 12px; font-weight: 600; }
-  .tc-count { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .tc-empty { font-size: 11px; color: var(--muted); }
-  .conn-list { display: flex; flex-direction: column; gap: 8px; }
-  .conn-row { display: flex; align-items: center; gap: 8px; }
-  .conn-name { font-size: 12px; color: var(--ivory-dim); }
-  .conn-state { margin-left: auto; font-size: 10.5px; letter-spacing: .06em; }
-  .conn-state-ok { color: #4ade80; }
-  .conn-state-reconnecting { color: #fbbf24; animation: pulse 1s ease-in-out infinite; }
-
-  /* ——— Mobile ——— */
-  @media (max-width: 1100px) {
-    .watch .chat-col { width: 300px; }
-    .dash-stats { grid-template-columns: 1fr 1fr; }
-    .dash-main { grid-template-columns: 1fr; }
-    .dash-side { flex-direction: row; overflow: visible; }
-    .dash-side .side-box { flex: 1; min-width: 0; }
-  }
-  @media (max-width: 760px) {
-    body { overflow: auto; }
-    #root, .app { height: auto; min-height: 100vh; }
-    .topbar { padding: 0 14px; height: 56px; }
-    .topbar-schedule { display: none; }
-    .mb-logo-sub { display: none; }
-    .mb-logo-word { font-size: 19px; }
-    .watch { flex-direction: column; }
-    .watch .stage { padding: 12px; flex: none; }
-    .player { aspect-ratio: 16/9; flex: none; min-height: 0; }
-    .pip { width: 120px; right: 10px; bottom: 10px; }
-    .player-tag { top: 10px; left: 10px; padding: 5px 10px; font-size: 11px; }
-    .watch .chat-col { width: 100%; border-left: none; border-top: 1px solid var(--line-soft); height: 60vh; }
-    .watch.layout-flipped { flex-direction: column; }
-    .watch.layout-flipped .chat-col { border-right: none; border-top: 1px solid var(--line-soft); }
-    .watch.layout-theater .chat-col { position: static; width: 100%; }
-    .watch.layout-theater .stage-bar { margin-right: 0; }
-    /* page scrolls via body on mobile — let settings flow instead of nesting a scroll */
-    .settings-view { flex: none; overflow-y: visible; }
-    .stage-bar { flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .social-btn { width: 34px; height: 34px; }
-    .dash { padding: 12px 14px; }
-    .dash-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .dash-side { flex-direction: column; }
-    .dash-main { grid-template-rows: 50vh auto; }
-  }
   .stat-card {
     border: 1px solid var(--line-soft); border-radius: 12px; background: var(--panel);
     padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 6px;
@@ -571,10 +448,6 @@
   .stat-card-count { font-family: var(--mono); font-size: 26px; font-weight: 600; letter-spacing: .01em; }
   .sparkline { display: block; }
 
-  .velocity { display: flex; align-items: flex-end; gap: 2px; height: 74px; }
-  .vel-col { flex: 1; display: flex; align-items: flex-end; height: 100%; }
-  .vel-stack { width: 100%; display: flex; flex-direction: column; border-radius: 1px; overflow: hidden; min-height: 2px; opacity: .85; transition: height .4s ease; }
-
   /* ============================ ADDITIONS ===================================
      Rules added on top of the verbatim handoff port for the real app:
      a third "unavailable" source state. ===================================== */
@@ -583,9 +456,6 @@
   .conn-dot.conn-unavailable { opacity: 1; background: var(--muted); box-shadow: none; }
   .src-toggle.is-unavailable { cursor: default; }
   .src-toggle.is-unavailable.is-on { opacity: .5; }
-
-  /* dashboard connection list (kept for parity) */
-  .conn-state-unavailable { color: var(--muted); }
 
   /* connection banner when the aggregator websocket drops */
   .conn-banner {
@@ -740,6 +610,47 @@
 .settings-check input[type='checkbox']:checked::after {
   transform: scale(1);
 }
+.settings-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.settings-row input {
+  flex: 1;
+  min-width: 0;
+}
+.settings-find {
+  border-radius: 10px;
+  padding: 0 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  color: var(--ivory-dim);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.18s, border-color 0.2s, box-shadow 0.25s;
+}
+.settings-find:hover {
+  color: var(--ivory);
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 14px rgba(232, 255, 156, 0.1);
+}
+.settings-find:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.settings-hint {
+  font-size: 11.5px;
+  font-family: var(--mono);
+}
+.settings-hint.hint-ok {
+  color: #4ade80;
+}
+.settings-hint.hint-err {
+  color: #fbbf24;
+}
 .set-status-dot {
   width: 7px;
   height: 7px;
@@ -809,6 +720,10 @@
 }
 .settings-error {
   color: #f87171;
+  font-size: 12.5px;
+}
+.settings-warn {
+  color: #fbbf24;
   font-size: 12.5px;
 }
 
@@ -919,4 +834,79 @@
   border-color: var(--accent-soft);
   transform: translateY(-2px);
   box-shadow: 0 0 16px rgba(232, 255, 156, 0.12);
+}
+
+/* ============================ RESPONSIVE ==================================
+   Three width tiers + touch ergonomics:
+   ≤1100px  narrow desktop / iPad landscape — slimmer chat column
+   ≤900px   iPad portrait + phones — the stage stacks above the chat, the
+            page scrolls via the body, heights move to dvh (iOS toolbars)
+   ≤480px   phones — compressed top bar
+   ========================================================================== */
+
+@media (max-width: 1100px) {
+  .watch .chat-col { width: 300px; }
+  .dash-stats { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  #root, .app { height: auto; min-height: 100vh; min-height: 100dvh; }
+  .topbar {
+    height: 56px;
+    padding: 0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+  }
+  .topbar-schedule { display: none; }
+  .conn-banner { top: 64px; }
+
+  .watch { flex-direction: column; }
+  .watch .stage {
+    flex: none;
+    padding: 12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+  }
+  .player { aspect-ratio: 16 / 9; flex: none; min-height: 0; }
+  /* left-pinned here — the base rule's centering translate must not stick */
+  .player-tag { top: 10px; left: 10px; transform: none; padding: 5px 10px; font-size: 11px; }
+  .watch .chat-col {
+    width: 100%; border-left: none; border-top: 1px solid var(--line-soft);
+    height: 60vh; height: 60dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .stage-bar { flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .social-btn { width: 34px; height: 34px; }
+
+  .dash { padding: 12px max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left)); }
+  .dash-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card-combined { grid-column: 1 / -1; }
+  .dash-main { grid-template-rows: 60vh; grid-template-rows: 60dvh; }
+
+  /* page scrolls via body — settings flows instead of nesting a scroll */
+  .settings-view { flex: none; overflow-y: visible; }
+  /* iOS zooms the whole page when a focused input is under 16px */
+  .settings-group input[type='text'],
+  .settings-group input:not([type]),
+  .settings-group input[type='password'],
+  .admin-login-card input { font-size: 16px; }
+}
+
+@media (max-width: 480px) {
+  .mb-logo-word { font-size: 19px; }
+  .mb-logo-sub { display: none; }
+  .mode-tab { font-size: 12px; letter-spacing: .1em; padding: 8px 10px 10px; }
+  .mode-tab.is-active::after { left: 10px; right: 10px; }
+  .viewer-tooltip { width: min(280px, calc(100vw - 28px)); }
+  .chat-feed { padding: 10px 10px 14px; }
+}
+
+/* ——— Touch ergonomics ——— */
+@media (hover: none), (pointer: coarse) {
+  /* no hover on touch: keep the host tag visible and the swap button expanded */
+  .player-tag { opacity: 1; pointer-events: auto; }
+  .tag-swap {
+    max-width: 130px; opacity: 1; margin-left: 4px;
+    padding-left: 10px; border-left: 1px solid var(--line-soft);
+  }
+  /* comfortable hit targets for the chat tools / source toggles */
+  .chat-tool, .src-toggle { width: 34px; height: 34px; }
+  .conn-dot { top: 4px; right: 4px; }
 }

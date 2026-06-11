@@ -12,13 +12,12 @@ export const PLATFORMS: Platform[] = ['twitch', 'kick', 'x'];
 export const HOSTS: Host[] = ['banks', 'ansem'];
 
 export const PLATFORM_META: Record<
-  Platform | 'bubble',
+  Platform,
   { name: string; color: string; accent: string }
 > = {
   twitch: { name: 'Twitch', color: '#a970ff', accent: '#a970ff' },
   kick: { name: 'Kick', color: '#52ff8f', accent: '#52ff8f' },
   x: { name: 'X', color: '#d8d5cc', accent: '#ffffff' },
-  bubble: { name: 'Bubble', color: '#e8ff9c', accent: '#e8ff9c' },
 };
 
 export const HOST_META: Record<

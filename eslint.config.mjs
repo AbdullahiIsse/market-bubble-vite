@@ -10,7 +10,7 @@ export default defineConfig([
   ...tseslint.configs.recommended,
   {
     // react-hooks v7 'recommended' includes the compiler-derived rules
-    // (set-state-in-effect etc.), so MarketBubbleApp's eslint-disable stays valid.
+    // (set-state-in-effect etc.) on top of the classic two.
     files: ['**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: { ...reactHooks.configs.recommended.rules },

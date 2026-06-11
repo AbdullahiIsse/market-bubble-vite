@@ -1,15 +1,13 @@
 import type { Platform } from '@/shared/protocol';
 import { PLATFORM_META } from '@/shared/meta';
 
-type IconPlatform = Platform | 'bubble';
-
 // Inline platform glyphs, ported verbatim from the design handoff.
 export function PlatformIcon({
   platform,
   size = 14,
   fill,
 }: {
-  platform: IconPlatform;
+  platform: Platform;
   size?: number;
   fill?: string;
 }) {
@@ -25,14 +23,6 @@ export function PlatformIcon({
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill={c} aria-label="Kick">
         <path d="M3 2h6v6h2V6h2V4h2V2h6v7h-2v2h-2v2h2v2h2v7h-6v-2h-2v-2h-2v-2h-2v6H3V2z" />
-      </svg>
-    );
-  }
-  if (platform === 'bubble') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" aria-label="Bubble">
-        <circle cx="12" cy="12" r="8.2" fill="none" stroke={c} strokeWidth="2" />
-        <circle cx="9.2" cy="8.8" r="2.1" fill={c} />
       </svg>
     );
   }

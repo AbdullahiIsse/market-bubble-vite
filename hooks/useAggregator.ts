@@ -17,7 +17,7 @@ const BUCKET_COUNT = 48;
 // configured channels can exceed 100 msgs/s).
 const FLUSH_MS = 100;
 
-export interface Bucket {
+interface Bucket {
   twitch: number;
   kick: number;
   x: number;
@@ -28,7 +28,7 @@ export interface AggregatorState {
   viewers: ViewerMatrix;
   history: ViewerHistory;
   status: StatusMap;
-  live: boolean;
+  live: boolean | null; // null until the first server snapshot — "unknown", not "offline"
   connected: boolean;
   everConnected: boolean;
   msgsPerMin: number;
@@ -54,7 +54,9 @@ export function useAggregator(): AggregatorState {
     kick: 'unavailable',
     x: 'unavailable',
   });
-  const [live, setLive] = useState(false);
+  // null = no snapshot yet. Starting at false would flash the offline countdown
+  // over a live stream while the websocket connects.
+  const [live, setLive] = useState<boolean | null>(null);
   const [connected, setConnected] = useState(false);
   const [everConnected, setEverConnected] = useState(false);
   const [buckets, setBuckets] = useState<Bucket[]>(() =>

@@ -17,7 +17,6 @@ function appendedSince(messages: Msg[], prevLastId: string | null): number {
 
 // Auto-scrolling feed. Stays pinned to the bottom; if the user scrolls up,
 // new arrivals don't yank the scroll — a "↓ N new messages" pill appears.
-// Density is baked to "cozy" (the prototype default).
 export function ChatFeed({ messages, className }: { messages: Msg[]; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
@@ -69,7 +68,7 @@ export function ChatFeed({ messages, className }: { messages: Msg[]; className?:
   return (
     <div className="chat-feed-wrap">
       <div
-        className={'chat-feed density-cozy' + (className ? ' ' + className : '')}
+        className={'chat-feed' + (className ? ' ' + className : '')}
         ref={ref}
         onScroll={onScroll}
       >

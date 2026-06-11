@@ -22,27 +22,23 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
   const [auth, setAuth] = useState<{ authed: boolean; required: boolean; available: boolean } | null>(null);
   const [isAdminPath, setIsAdminPath] = useState(() => window.location.pathname === '/admin');
 
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/admin/session')
-      .then((r) => r.json())
-      .then((d) => {
-        if (alive) setAuth({ authed: !!d.authed, required: !!d.required, available: !!d.available });
-      })
-      .catch(() => {
-        if (alive) setAuth({ authed: false, required: false, available: false });
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
   // one-time read: the popout flag is part of the window's identity, not state
   const [isPopout] = useState(
     () => new URLSearchParams(window.location.search).get('popout') === 'chat',
   );
 
-  const [mode, setMode] = useState<Mode>('watch');
+  // Settings is a transient admin view, NEVER the persisted landing — only
+  // Watch/Dashboard restore, so a logged-in admin (valid cookie across a
+  // redeploy) lands on the stream, not the settings editor.
+  const [mode, setMode] = useState<Mode>(() => {
+    try {
+      const stored = localStorage.getItem(MODE_KEY);
+      if (stored === 'watch' || stored === 'dashboard') return stored;
+    } catch {
+      /* private mode */
+    }
+    return 'watch';
+  });
   const [mainHost, setMainHost] = useState<Host>('banks'); // never persisted
   const [chatHidden, setChatHidden] = useState(false);
   const [sources, setSources] = useState<Record<Platform, boolean>>({
@@ -51,16 +47,33 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
     x: true,
   });
 
-  // Restore the persisted mode after mount. This is deliberately an effect, not
-  // a lazy initializer: SSR must render the default so server and client HTML
-  // match, then we restore the stored value once on the client.
   useEffect(() => {
-    const stored = localStorage.getItem(MODE_KEY);
-    // Settings is a transient admin view, NEVER the persisted landing — only
-    // Watch/Dashboard restore, so a logged-in admin (valid cookie across a
-    // redeploy) lands on the stream, not the settings editor.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored === 'watch' || stored === 'dashboard') setMode(stored);
+    let alive = true;
+    fetch('/api/admin/session')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return;
+        const next = { authed: !!d.authed, required: !!d.required, available: !!d.available };
+        setAuth(next);
+        // /admin with the gate open (dev, no password) or an already-valid
+        // session: there is nothing to log in to — land straight in Settings
+        // instead of a login form whose endpoint would only ever 404.
+        if (
+          window.location.pathname === '/admin' &&
+          next.available &&
+          (next.authed || !next.required)
+        ) {
+          window.history.replaceState({}, '', '/');
+          setIsAdminPath(false);
+          setMode('settings');
+        }
+      })
+      .catch(() => {
+        if (alive) setAuth({ authed: false, required: false, available: false });
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const changeMode = useCallback((m: Mode) => {
@@ -135,7 +148,7 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
     );
   }
 
-  if (isAdminPath && (!auth || (auth.available && !auth.authed))) {
+  if (isAdminPath && (!auth || (auth.required && !auth.authed))) {
     return <div className="app">{auth ? <AdminLogin onSuccess={onLoginSuccess} /> : null}</div>;
   }
 

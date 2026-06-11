@@ -160,7 +160,7 @@ export function createTwitchIrcAdapter(
         const host = channelToHost[channel];
         if (!host) break;
         let text = msg.params[1] || '';
-        // unwrap /me actions
+        // unwrap /me actions (CTCP framing: \x01ACTION <text>\x01)
         const action = text.match(/^ACTION (.*)$/);
         if (action) text = action[1];
         const user = msg.tags['display-name'] || loginFromPrefix(msg.prefix);

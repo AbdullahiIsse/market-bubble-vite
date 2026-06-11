@@ -138,7 +138,8 @@ server/      custom server, hub, ws-gateway, runtime-config (admin-editable
              sim), pollers/, lib/ (admin-auth, tokens, http, log, …)
 shared/      protocol.ts (ws message shapes) + meta.ts (brand constants)
 src/         main.tsx (config fetch → render bootstrap), fonts.css,
-             globals.css (verbatim design port); index.html at the root
+             globals.css (design port + responsive/mobile pass); index.html at
+             the root
 components/  1:1 React port of the handoff UI + AdminLogin / SettingsView
 hooks/       useAggregator (ws client), useCountdown
 ```

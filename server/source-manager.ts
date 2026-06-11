@@ -4,7 +4,9 @@ import type { AppConfig } from './config';
 import type { Hub } from './hub';
 import type { Platform } from '../shared/protocol';
 import type { RuntimeConfig } from './runtime-config';
+import { scoped } from './lib/log';
 
+const log = scoped('source-manager');
 const PLATFORMS: Platform[] = ['twitch', 'kick', 'x'];
 
 // A starter boots one platform and returns its stop function.
@@ -23,15 +25,25 @@ export function createSourceManager(
 ): SourceManager {
   const stops: Partial<Record<Platform, () => void | Promise<void>>> = {};
 
+  // start/stop must never throw into the API request that triggered a restart:
+  // a failed platform degrades to "not running" (next restart retries it).
   function startOne(p: Platform) {
     if (stops[p]) return; // already running — don't overwrite/leak the existing stop handle
-    stops[p] = starters[p](hub, runtime.getConfig());
+    try {
+      stops[p] = starters[p](hub, runtime.getConfig());
+    } catch (err) {
+      log.error(`start ${p} failed`, (err as Error).message);
+    }
   }
   async function stopOne(p: Platform) {
     const stop = stops[p];
     if (!stop) return;
     delete stops[p];
-    await stop();
+    try {
+      await stop();
+    } catch (err) {
+      log.warn(`stop ${p} failed`, (err as Error).message);
+    }
   }
 
   return {

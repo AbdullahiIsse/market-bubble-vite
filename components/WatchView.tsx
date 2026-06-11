@@ -22,7 +22,7 @@ export function WatchView({
 }: {
   channels: Record<Host, string>;
   mainHost: Host;
-  live: boolean;
+  live: boolean | null;
   onSwap: () => void;
   viewers: ViewerMatrix;
   messages: Msg[];
@@ -35,7 +35,7 @@ export function WatchView({
   onPopout: () => void;
 }) {
   return (
-    <div className="watch layout-classic" data-screen-label="Watch mode">
+    <div className="watch" data-screen-label="Watch mode">
       <div className="stage">
         <StreamPlayer channels={channels} mainHost={mainHost} live={live} onSwap={onSwap} />
         <div className="stage-bar">

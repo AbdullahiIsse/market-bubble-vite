@@ -2,12 +2,15 @@
 // AppConfig. Precedence: persisted runtime file > .env.local > built-in defaults.
 // Cookies (auth_token/ct0) are stored here but are WRITE-ONLY to the API:
 // publicState() never returns them, only a boolean `xCookiesSet`.
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import type { Host, Platform } from '../shared/protocol';
 import { loadConfig, type AppConfig } from './config';
+import { scoped } from './lib/log';
+
+const log = scoped('runtime-config');
 
 const DEFAULT_FILE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -52,7 +55,9 @@ export type StreamPatch = z.infer<typeof StreamPatchSchema>;
 export interface RuntimeConfig {
   getConfig(): AppConfig;
   publicState(): StreamPublicState;
-  update(patch: StreamPatch): { changedPlatforms: Platform[] };
+  // `persisted: false` = settings applied (in memory) but couldn't be written to
+  // disk — they won't survive a process restart.
+  update(patch: StreamPatch): { changedPlatforms: Platform[]; persisted: boolean };
 }
 
 export function createRuntimeConfig(opts: { filePath?: string } = {}): RuntimeConfig {
@@ -88,6 +93,7 @@ export function createRuntimeConfig(opts: { filePath?: string } = {}): RuntimeCo
   }
 
   function persist() {
+    mkdirSync(path.dirname(filePath), { recursive: true });
     const tmp = filePath + '.tmp';
     writeFileSync(tmp, JSON.stringify(settings, null, 2), 'utf8');
     renameSync(tmp, filePath);
@@ -120,7 +126,7 @@ export function createRuntimeConfig(opts: { filePath?: string } = {}): RuntimeCo
     };
   }
 
-  function update(patch: StreamPatch): { changedPlatforms: Platform[] } {
+  function update(patch: StreamPatch): { changedPlatforms: Platform[]; persisted: boolean } {
     const changed = new Set<Platform>();
 
     for (const host of ['banks', 'ansem'] as Host[]) {
@@ -162,8 +168,19 @@ export function createRuntimeConfig(opts: { filePath?: string } = {}): RuntimeCo
       changed.add('x');
     }
 
-    if (changed.size > 0) persist();
-    return { changedPlatforms: [...changed] };
+    // A failed disk write must not abort the save: the in-memory settings are the
+    // live source of truth (getConfig feeds the adapters), so the reconnect still
+    // has to happen. Production hosts with an ephemeral/read-only fs land here.
+    let persisted = true;
+    if (changed.size > 0) {
+      try {
+        persist();
+      } catch (err) {
+        persisted = false;
+        log.error('persist failed — settings applied in memory only', (err as Error).message);
+      }
+    }
+    return { changedPlatforms: [...changed], persisted };
   }
 
   return { getConfig, publicState, update };
