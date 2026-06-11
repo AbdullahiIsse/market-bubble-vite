@@ -42,6 +42,11 @@ export function parseBroadcastId(raw: string): string {
 }
 
 export function startXSource(hub: Hub, config: AppConfig): () => void {
+  // A (re)started source must not inherit its predecessor's hub state: with the
+  // ids removed / X disabled there is no poller left to overwrite the previous
+  // broadcast's counts, so the stale live=true would pin the whole app "live"
+  // (hiding the offline countdown) and the dashboard would keep its viewer count.
+  hub.setPlatformViewers('x', { banks: null, ansem: null }, false);
   if (!config.x.enabled) {
     hub.setStatus('x', 'unavailable');
     return () => {};
