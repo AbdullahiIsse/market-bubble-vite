@@ -24,6 +24,10 @@ const CHAT_BATCH_MS = 50; // coalesce chat fan-out into ≤20 frames/s per clien
 // stream crash or flaky poll): wipe its chat instead of leaving it under the
 // countdown.
 const CHAT_CLEAR_GRACE_MS = 2 * 60 * 1000;
+// While KNOWN offline, chat silent this long is stale (people who typed into
+// the offline channels) — wipe it. Catches what the live→offline grace can't:
+// chat that arrives after the wipe, or before any live this server run.
+const CHAT_IDLE_CLEAR_MS = 5 * 60 * 1000;
 
 export interface Hub {
   ingestMessage(msg: ChatMessage): void;
@@ -37,8 +41,11 @@ export interface Hub {
   subscribe(fn: (event: ServerEvent) => void): () => void;
 }
 
-export function createHub(opts: { chatClearGraceMs?: number } = {}): Hub {
+export function createHub(
+  opts: { chatClearGraceMs?: number; chatIdleClearMs?: number } = {},
+): Hub {
   const chatClearGraceMs = opts.chatClearGraceMs ?? CHAT_CLEAR_GRACE_MS;
+  const chatIdleClearMs = opts.chatIdleClearMs ?? CHAT_IDLE_CLEAR_MS;
   const messages: ChatMessage[] = [];
   const recentIds = new Set<string>();
   const recentOrder: string[] = [];
@@ -65,6 +72,8 @@ export function createHub(opts: { chatClearGraceMs?: number } = {}): Hub {
   // flags from real polls, so the boot "unknown" state never arms the timer
   let wasAnyLive = false;
   let chatClearTimer: NodeJS.Timeout | null = null;
+  // idle wipe while known offline; rearmed by each message, cancelled on live
+  let chatIdleTimer: NodeJS.Timeout | null = null;
 
   function broadcast(event: ServerEvent) {
     for (const fn of subscribers) {
@@ -137,6 +146,14 @@ export function createHub(opts: { chatClearGraceMs?: number } = {}): Hub {
     broadcast(buildSnapshot());
   }
 
+  function restartIdleClear() {
+    if (chatIdleTimer) clearTimeout(chatIdleTimer);
+    chatIdleTimer = setTimeout(() => {
+      chatIdleTimer = null;
+      clearChat();
+    }, chatIdleClearMs);
+  }
+
   function remember(id: string) {
     recentIds.add(id);
     recentOrder.push(id);
@@ -154,6 +171,9 @@ export function createHub(opts: { chatClearGraceMs?: number } = {}): Hub {
       if (messages.length > RING_CAP) messages.splice(0, messages.length - RING_CAP);
       chatQueue.push(msg);
       if (!chatTimer) chatTimer = setTimeout(flushChat, CHAT_BATCH_MS);
+      // overallLive() is true while liveness is unknown, so boot-state chat
+      // never arms the idle wipe — only KNOWN-offline silence does
+      if (!overallLive()) restartIdleClear();
     },
 
     removeMessages(platform, sel) {
@@ -191,6 +211,16 @@ export function createHub(opts: { chatClearGraceMs?: number } = {}): Hub {
             clearChat();
           }, chatClearGraceMs);
         }
+      }
+      if (overallLive()) {
+        if (chatIdleTimer) {
+          clearTimeout(chatIdleTimer);
+          chatIdleTimer = null;
+        }
+      } else if (!chatIdleTimer && messages.length > 0) {
+        // existing chat with no live stream (e.g. a flap the grace timer let
+        // through, or chat retained across restart polls) still goes stale
+        restartIdleClear();
       }
       // coalesce: three pollers landing together emit one event
       if (viewerTimer) return;
