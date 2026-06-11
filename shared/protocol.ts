@@ -57,10 +57,13 @@ export type ServerEvent =
       history: ViewerHistory;
       status: StatusMap;
       live: boolean;
+      twitchChannels: Record<Host, string>;
     }
   // chat fan-out is coalesced server-side (~50ms window) so the wire carries
   // batches, not one frame per message
   | { type: 'chat_batch'; messages: ChatMessage[] }
   | { type: 'viewers'; viewers: ViewerMatrix; live: boolean }
   | { type: 'status'; platform: Platform; status: SourceStatus }
-  | { type: 'remove'; platform: Platform; ids?: string[]; user?: string };
+  | { type: 'remove'; platform: Platform; ids?: string[]; user?: string }
+  // admin retargeted a stream slot — the player must swap embeds without a reload
+  | { type: 'config'; twitchChannels: Record<Host, string> };

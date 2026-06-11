@@ -12,12 +12,15 @@ const MODE_KEY = 'mb-mode';
 
 // `twitchChannels` arrives from the config-gated bootstrap in src/main.tsx
 // (env-derived via /api/config) so the player embeds the configured channel
-// from the very first render.
+// from the very first render. Once the websocket snapshot lands the hub's
+// live channels take over, so a settings save retargets the player on every
+// open tab without a reload.
 // Identity stability matters everywhere below: chat flushes re-render this
 // component ~10x/s, and the memoized subtrees (player, top bar…) must see
 // unchanged props to skip.
 export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Host, string> }) {
   const agg = useAggregator();
+  const channels = agg.twitchChannels ?? twitchChannels;
 
   const [auth, setAuth] = useState<{ authed: boolean; required: boolean; available: boolean } | null>(null);
   const [isAdminPath, setIsAdminPath] = useState(() => window.location.pathname === '/admin');
@@ -181,7 +184,7 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
         <SettingsView status={agg.status} onLogout={logout} onUnauthorized={onUnauthorized} />
       ) : effectiveMode === 'watch' ? (
         <WatchView
-          channels={twitchChannels}
+          channels={channels}
           mainHost={mainHost}
           live={agg.live}
           onSwap={swapHost}

@@ -3,6 +3,7 @@
 // the overall live flag. Adapters/pollers push into it; the ws-gateway subscribes.
 import type {
   ChatMessage,
+  Host,
   HostCounts,
   Platform,
   ServerEvent,
@@ -25,6 +26,8 @@ export interface Hub {
   removeMessages(platform: Platform, sel: { ids?: string[]; user?: string }): void;
   setPlatformViewers(platform: Platform, counts: HostCounts, isLive: boolean): void;
   setStatus(platform: Platform, status: SourceStatus): void;
+  // seeded at boot, re-pushed after every settings save; broadcasts only on change
+  setTwitchChannels(channels: Record<Host, string>): void;
   statusSnapshot(): StatusMap;
   snapshot(): Extract<ServerEvent, { type: 'snapshot' }>;
   subscribe(fn: (event: ServerEvent) => void): () => void;
@@ -47,6 +50,7 @@ export function createHub(): Hub {
     kick: 'unavailable',
     x: 'unavailable',
   };
+  let twitchChannels: Record<Host, string> = { banks: '', ansem: '' };
 
   const subscribers = new Set<(event: ServerEvent) => void>();
   let viewerTimer: NodeJS.Timeout | null = null;
@@ -145,6 +149,12 @@ export function createHub(): Hub {
       broadcast({ type: 'status', platform, status: status_ });
     },
 
+    setTwitchChannels(channels) {
+      if (channels.banks === twitchChannels.banks && channels.ansem === twitchChannels.ansem) return;
+      twitchChannels = { ...channels };
+      broadcast({ type: 'config', twitchChannels: { ...twitchChannels } });
+    },
+
     statusSnapshot() {
       return { ...status };
     },
@@ -165,6 +175,7 @@ export function createHub(): Hub {
         },
         status: { ...status },
         live: overallLive(),
+        twitchChannels: { ...twitchChannels },
       };
     },
 

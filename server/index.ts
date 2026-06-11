@@ -225,6 +225,9 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, deps: ApiDep
       return true;
     }
     const { changedPlatforms, persisted } = deps.runtime.update(parsed.data);
+    // push the (possibly) new channels to connected players before the slower
+    // reconnect — the hub broadcasts only when they actually changed
+    deps.hub.setTwitchChannels(deps.runtime.getConfig().twitchChannels);
     const mgr = deps.getManager();
     if (mgr) {
       try {
@@ -288,6 +291,7 @@ async function main() {
   const port = config.port;
 
   const hub = createHub();
+  hub.setTwitchChannels(config.twitchChannels); // snapshots carry channels from the first client on
   const limiter = createLoginLimiter();
   let started: { stop: () => void | Promise<void>; manager: SourceManager | null } | null = null;
 
