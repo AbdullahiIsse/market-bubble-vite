@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type {
   ChatMessage as Msg,
   Host,
@@ -33,6 +33,7 @@ export interface AggregatorState {
   // null until the first snapshot; afterwards tracks settings saves live, so the
   // player swaps embeds without a page reload
   twitchChannels: Record<Host, string> | null;
+  kickSlugs: Record<Host, string> | null;
   connected: boolean;
   everConnected: boolean;
   msgsPerMin: number;
@@ -62,6 +63,7 @@ export function useAggregator(): AggregatorState {
   // over a live stream while the websocket connects.
   const [live, setLive] = useState<boolean | null>(null);
   const [twitchChannels, setTwitchChannels] = useState<Record<Host, string> | null>(null);
+  const [kickSlugs, setKickSlugs] = useState<Record<Host, string> | null>(null);
   const [connected, setConnected] = useState(false);
   const [everConnected, setEverConnected] = useState(false);
   const [buckets, setBuckets] = useState<Bucket[]>(() =>
@@ -149,9 +151,12 @@ export function useAggregator(): AggregatorState {
 
     // keep the old reference when values are equal — the memoized player must
     // not see a new channels identity on every ws reconnect snapshot
-    function applyChannels(next: Record<Host, string> | undefined) {
+    function applyChannels(
+      next: Record<Host, string> | undefined,
+      set: Dispatch<SetStateAction<Record<Host, string> | null>>,
+    ) {
       if (!next || !next.banks || !next.ansem) return; // old-server snapshot during a deploy
-      setTwitchChannels((prev) =>
+      set((prev) =>
         prev && prev.banks === next.banks && prev.ansem === next.ansem ? prev : next,
       );
     }
@@ -165,7 +170,8 @@ export function useAggregator(): AggregatorState {
           setHistory(event.history);
           setStatus(event.status);
           setLive(event.live);
-          applyChannels(event.twitchChannels);
+          applyChannels(event.twitchChannels, setTwitchChannels);
+          applyChannels(event.kickSlugs, setKickSlugs);
           setConnected(true);
           setEverConnected(true);
           break;
@@ -190,7 +196,8 @@ export function useAggregator(): AggregatorState {
           setStatus((s) => ({ ...s, [event.platform]: event.status }));
           break;
         case 'config':
-          applyChannels(event.twitchChannels);
+          applyChannels(event.twitchChannels, setTwitchChannels);
+          applyChannels(event.kickSlugs, setKickSlugs);
           break;
         case 'remove': {
           const drop = (m: Msg) => {
@@ -238,6 +245,7 @@ export function useAggregator(): AggregatorState {
     status,
     live,
     twitchChannels,
+    kickSlugs,
     connected,
     everConnected,
     msgsPerMin,

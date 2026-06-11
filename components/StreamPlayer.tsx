@@ -1,6 +1,7 @@
-import { Fragment, memo, useState } from 'react';
-import type { Host } from '@/shared/protocol';
-import { HOST_META } from '@/shared/meta';
+import { Fragment, memo, useRef, useState } from 'react';
+import type { Host, ViewerMatrix } from '@/shared/protocol';
+import { HOST_META, PLATFORM_META } from '@/shared/meta';
+import { pickPlayerPlatform, type PlayerPlatform } from '@/shared/player-source';
 import { useCountdown } from '@/hooks/useCountdown';
 import { HostGlyph } from './HostGlyph';
 
@@ -13,11 +14,15 @@ const HERO_IMG =
 // memo: the embed subtree must not re-render on every chat flush.
 export const StreamPlayer = memo(function StreamPlayer({
   channels,
+  kickSlugs,
+  viewers,
   mainHost,
   live,
   onSwap,
 }: {
   channels: Record<Host, string>;
+  kickSlugs: Record<Host, string>;
+  viewers: ViewerMatrix;
   mainHost: Host;
   live: boolean | null; // null = not known yet (no server snapshot)
   onSwap: () => void;
@@ -27,6 +32,14 @@ export const StreamPlayer = memo(function StreamPlayer({
 
   // Twitch's embed requires the exact serving hostname as `parent`.
   const [parent] = useState(() => window.location.hostname || 'localhost');
+
+  // Per-host platform choice. The ref makes it sticky: while a platform's
+  // liveness is unknown (failed poll) the previous choice holds, so a blip
+  // never reloads the iframe. Idempotent, so the StrictMode double-render
+  // and chat-driven parent renders are harmless.
+  const chosenRef = useRef<Record<Host, PlayerPlatform>>({ banks: 'twitch', ansem: 'twitch' });
+  const platform = pickPlayerPlatform(viewers, mainHost, chosenRef.current[mainHost]);
+  chosenRef.current[mainHost] = platform;
 
   // Live state unknown (websocket snapshot hasn't landed): hold a neutral hero —
   // committing to the countdown here flashes "We're offline" over a live stream.
@@ -79,12 +92,17 @@ export const StreamPlayer = memo(function StreamPlayer({
     );
   }
 
+  // Twitch's embed requires `parent`; Kick's player just takes the slug.
   const embed =
-    'https://player.twitch.tv/?channel=' +
-    encodeURIComponent(channels[mainHost]) +
-    '&parent=' +
-    encodeURIComponent(parent) +
-    '&muted=true&autoplay=true';
+    platform === 'twitch'
+      ? 'https://player.twitch.tv/?channel=' +
+        encodeURIComponent(channels[mainHost]) +
+        '&parent=' +
+        encodeURIComponent(parent) +
+        '&muted=true&autoplay=true'
+      : 'https://player.kick.com/' +
+        encodeURIComponent(kickSlugs[mainHost]) +
+        '?autoplay=true&muted=true';
 
   return (
     <div className="player">
@@ -95,7 +113,7 @@ export const StreamPlayer = memo(function StreamPlayer({
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
         scrolling="no"
-        title={HOST_META[mainHost].name + ' stream'}
+        title={HOST_META[mainHost].name + ' stream on ' + PLATFORM_META[platform].name}
       />
       <div className="player-tag">
         <span

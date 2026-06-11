@@ -7,6 +7,7 @@ import { ChatColumn } from './ChatColumn';
 // Default viewer-facing screen: stage (player + stage bar) beside the chat column.
 export function WatchView({
   channels,
+  kickSlugs,
   mainHost,
   live,
   onSwap,
@@ -21,6 +22,7 @@ export function WatchView({
   onPopout,
 }: {
   channels: Record<Host, string>;
+  kickSlugs: Record<Host, string>;
   mainHost: Host;
   live: boolean | null;
   onSwap: () => void;
@@ -37,7 +39,14 @@ export function WatchView({
   return (
     <div className="watch" data-screen-label="Watch mode">
       <div className="stage">
-        <StreamPlayer channels={channels} mainHost={mainHost} live={live} onSwap={onSwap} />
+        <StreamPlayer
+          channels={channels}
+          kickSlugs={kickSlugs}
+          viewers={viewers}
+          mainHost={mainHost}
+          live={live}
+          onSwap={onSwap}
+        />
         <div className="stage-bar">
           <ViewerPill viewers={viewers} up />
           <div className="stage-bar-spacer" />

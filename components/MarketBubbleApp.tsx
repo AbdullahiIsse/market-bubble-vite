@@ -18,9 +18,16 @@ const MODE_KEY = 'mb-mode';
 // Identity stability matters everywhere below: chat flushes re-render this
 // component ~10x/s, and the memoized subtrees (player, top bar…) must see
 // unchanged props to skip.
-export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Host, string> }) {
+export function MarketBubbleApp({
+  twitchChannels,
+  kickSlugs,
+}: {
+  twitchChannels: Record<Host, string>;
+  kickSlugs: Record<Host, string>;
+}) {
   const agg = useAggregator();
   const channels = agg.twitchChannels ?? twitchChannels;
+  const kick = agg.kickSlugs ?? kickSlugs;
 
   const [auth, setAuth] = useState<{ authed: boolean; required: boolean; available: boolean } | null>(null);
   const [isAdminPath, setIsAdminPath] = useState(() => window.location.pathname === '/admin');
@@ -185,6 +192,7 @@ export function MarketBubbleApp({ twitchChannels }: { twitchChannels: Record<Hos
       ) : effectiveMode === 'watch' ? (
         <WatchView
           channels={channels}
+          kickSlugs={kick}
           mainHost={mainHost}
           live={agg.live}
           onSwap={swapHost}

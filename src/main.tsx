@@ -18,9 +18,11 @@ import { MarketBubbleApp } from '@/components/MarketBubbleApp';
 import { setHostAvatars } from '@/components/HostGlyph';
 
 const DEFAULT_CHANNELS: Record<Host, string> = { banks: 'fazebanks', ansem: 'ansem' };
+const DEFAULT_KICK_SLUGS: Record<Host, string> = { banks: 'fazebanks', ansem: 'ansem' };
 
 interface BootConfig {
   twitchChannels: Record<Host, string>;
+  kickSlugs: Record<Host, string>;
   hostAvatars: HostAvatars;
 }
 
@@ -31,9 +33,11 @@ interface BootConfig {
 async function fetchBootConfig(): Promise<BootConfig> {
   try {
     const res = await fetch('/api/config');
-    if (!res.ok) return { twitchChannels: DEFAULT_CHANNELS, hostAvatars: {} };
+    if (!res.ok)
+      return { twitchChannels: DEFAULT_CHANNELS, kickSlugs: DEFAULT_KICK_SLUGS, hostAvatars: {} };
     const data = (await res.json()) as {
       twitchChannels?: Partial<Record<Host, string>>;
+      kickSlugs?: Partial<Record<Host, string>>;
       hostAvatars?: HostAvatars;
     };
     return {
@@ -41,21 +45,25 @@ async function fetchBootConfig(): Promise<BootConfig> {
         banks: data.twitchChannels?.banks || DEFAULT_CHANNELS.banks,
         ansem: data.twitchChannels?.ansem || DEFAULT_CHANNELS.ansem,
       },
+      kickSlugs: {
+        banks: data.kickSlugs?.banks || DEFAULT_KICK_SLUGS.banks,
+        ansem: data.kickSlugs?.ansem || DEFAULT_KICK_SLUGS.ansem,
+      },
       hostAvatars: data.hostAvatars ?? {},
     };
   } catch {
-    return { twitchChannels: DEFAULT_CHANNELS, hostAvatars: {} };
+    return { twitchChannels: DEFAULT_CHANNELS, kickSlugs: DEFAULT_KICK_SLUGS, hostAvatars: {} };
   }
 }
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<div className="app" />); // parity with the old <Suspense fallback>
 
-fetchBootConfig().then(({ twitchChannels, hostAvatars }) => {
+fetchBootConfig().then(({ twitchChannels, kickSlugs, hostAvatars }) => {
   setHostAvatars(hostAvatars); // before render: components read it during render
   root.render(
     <StrictMode>
-      <MarketBubbleApp twitchChannels={twitchChannels} />
+      <MarketBubbleApp twitchChannels={twitchChannels} kickSlugs={kickSlugs} />
     </StrictMode>,
   );
 });
